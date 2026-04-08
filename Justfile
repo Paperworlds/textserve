@@ -1,7 +1,7 @@
 # mcp-fleet Justfile
 
 build:
-    go build -o bin/mcpf ./cmd/mcpf
+    go build -ldflags "-X main.version=$(cat VERSION)" -o bin/mcpf ./cmd/mcpf
 
 test:
     go test ./...

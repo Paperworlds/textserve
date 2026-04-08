@@ -15,6 +15,24 @@ import (
 	"github.com/pdonorio/mcp-fleet/internal/registry"
 )
 
+// version is set at build time via -ldflags, falls back to VERSION file.
+var version = ""
+
+func resolveVersion() string {
+	if version != "" {
+		return version
+	}
+	root, err := findRepoRoot()
+	if err != nil {
+		return "unknown"
+	}
+	data, err := os.ReadFile(filepath.Join(root, "VERSION"))
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(data))
+}
+
 func main() {
 	root := buildRoot()
 	if err := root.Execute(); err != nil {
@@ -31,6 +49,8 @@ func buildRoot() *cobra.Command {
 			return cmd.Help()
 		},
 	}
+	binPath, _ := os.Executable()
+	root.Version = fmt.Sprintf("%s (bin: %s)", resolveVersion(), binPath)
 	root.AddCommand(
 		newStartCmd(),
 		newStopCmd(),
