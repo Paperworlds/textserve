@@ -1,0 +1,22 @@
+image: mcp/grafana
+transport: http
+port: 9892
+container_port: 8000
+endpoint_path: /mcp
+tags:
+  - monitoring
+  - docker
+env:
+  - name: GRAFANA_URL
+    value: "https://paradex.grafana.net"
+  - name: GRAFANA_SERVICE_ACCOUNT_TOKEN
+    op: "op://Private/Grafana Paradex/GRAFANA_API_KEY"
+    cache: "grafana-pdx/token"
+extra_args:
+  - "-transport"
+  - "streamable-http"
+  - "-address"
+  - "0.0.0.0:8000"
+health:
+  endpoint: /health
+  timeout: 5

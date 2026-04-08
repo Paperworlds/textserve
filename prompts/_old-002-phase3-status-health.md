@@ -41,5 +41,10 @@ Implement `mcpf status` table, health probes, and the `mcpf doctor` diagnostic.
 
 ## Integration
 
-- `mcpf status` should write to `~/.files/states/mcp-fleet.json` for statusline integration.
+- `mcpf status` should write to `~/.files/states/mcp-fleet.json` for statusline integration
+  (create parent dirs with `mkdir -p` if needed).
 - Format: `{"updated_at": "...", "healthy": N, "total": N, "unhealthy": ["name1"]}`
+
+## Completion gate
+
+Run `just test` before finishing. All bats tests (including test_health.sh) must pass.

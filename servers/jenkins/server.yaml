@@ -1,0 +1,29 @@
+image: ghcr.io/lanbaoshen/mcp-jenkins:latest
+transport: http
+port: 9887
+container_port: 9887
+endpoint_path: /mcp
+tags:
+  - ci
+  - docker
+env:
+  - name: JENKINS_URL
+    value: "https://jenky.dev.pdgm.io"
+  - name: JENKINS_USERNAME
+    op: "op://Private/CI Dev Secrets/JENKINS_USER"
+    cache: "jenkins/user"
+  - name: JENKINS_TOKEN
+    op: "op://Private/CI Dev Secrets/JENKINS_API_TOKEN"
+    cache: "jenkins/token"
+extra_args:
+  - "--transport"
+  - "streamable-http"
+  - "--jenkins-url"
+  - "${JENKINS_URL}"
+  - "--jenkins-username"
+  - "${JENKINS_USERNAME}"
+  - "--jenkins-password"
+  - "${JENKINS_TOKEN}"
+health:
+  endpoint: /health
+  timeout: 5

@@ -1,0 +1,26 @@
+image: mcp-datadog
+transport: http
+port: 9897
+container_port: 9000
+endpoint_path: /mcp
+tags:
+  - monitoring
+  - docker
+env:
+  - name: DD_API_KEY
+    op: "op://Private/Datadog API Keys/api-key"
+    cache: "datadog/api-key"
+  - name: DD_APP_KEY
+    op: "op://Private/Datadog API Keys/app-key"
+    cache: "datadog/app-key"
+  - name: DD_SITE
+    value: "datadoghq.com"
+  - name: MCP_TRANSPORT
+    value: "http"
+  - name: MCP_PORT
+    value: "9000"
+  - name: MCP_HOST
+    value: "0.0.0.0"
+health:
+  endpoint: /health
+  timeout: 5

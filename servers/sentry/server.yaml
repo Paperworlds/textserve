@@ -1,0 +1,8 @@
+transport: stdio
+managed_by: claude
+tags:
+  - monitoring
+  - stdio
+health:
+  probe: tool-list
+  timeout: 5

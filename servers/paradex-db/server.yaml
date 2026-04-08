@@ -1,0 +1,38 @@
+image: mcp-paradex-db
+transport: http
+port: 9898
+container_port: 9000
+endpoint_path: /sse
+tags:
+  - data
+  - docker
+network: host
+env:
+  - name: DB_HOST
+    cache_file: "paradex-db-mcp/host"
+  - name: DB_USER
+    cache_file: "paradex-db-mcp/user"
+  - name: DB_NAME
+    value: "paradex"
+  - name: DB_PORT
+    value: "5432"
+  - name: AWS_REGION
+    value: "ap-northeast-1"
+  - name: AWS_PROFILE
+    value: "paradex-prod.basic"
+  - name: MCP_MODE
+    value: "sse"
+volumes:
+  - host: "${HOME}/.aws/config"
+    container: "/root/.aws/config"
+    readonly: true
+    resolve_symlinks: true
+  - host: "${HOME}/.aws/sso"
+    container: "/root/.aws/sso"
+    readonly: true
+deps:
+  - cmd: "curl -sf https://api.cloudflare.com/cdn-cgi/trace | grep -q 'warp=on'"
+    hint: "Enable Cloudflare WARP before starting paradex-db MCP"
+health:
+  endpoint: /health
+  timeout: 10

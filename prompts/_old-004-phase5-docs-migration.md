@@ -15,7 +15,7 @@ mcp-fleet as the source of truth, and clean up deprecated skills files.
 
 ## Tasks
 
-1. Write `servers/<name>/README.md` for each of the 11 servers:
+1. Write `servers/<name>/README.md` for each of the 12 servers:
    - Tools exposed (list them)
    - Auth setup (env vars, 1Password paths if applicable)
    - Known issues / preconditions

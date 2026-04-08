@@ -1,0 +1,25 @@
+image: snowflake-mcp
+transport: http
+port: 9890
+container_port: 9000
+endpoint_path: /snowflake-mcp
+tags:
+  - data
+  - docker
+env:
+  - name: SNOWFLAKE_ACCOUNT
+    op: "op://Private/REDACTED/SNOWFLAKE_ACCOUNT"
+    cache: "snowflake/account"
+  - name: SNOWFLAKE_USER
+    op: "op://Private/REDACTED/SNOWFLAKE_USER"
+    cache: "snowflake/user"
+  - name: SNOWFLAKE_PASSWORD
+    op: "op://Private/REDACTED/SNOWFLAKE_PASSWORD"
+    cache: "snowflake/password"
+volumes:
+  - host: "${HOME}/.mcp/snowflake-tools.yaml"
+    container: "/app/services/tools_config.yaml"
+    readonly: true
+health:
+  probe: tcp
+  timeout: 10

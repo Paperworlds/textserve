@@ -39,14 +39,21 @@ image names, tags, any known deps or auth requirements.
    - Uses `yq` (already installed via brew)
 
 4. Write `tests/test_registry.sh` using bats:
-   - Test `list_servers` returns all 11 servers
+   - Test `list_servers` returns all 12 servers (jenkins, snowflake, grafana, grafana-pdx,
+     notion, airbyte, slack, slack-search, datadog, paradex-db, airflow, sentry)
    - Test `get_server_field jenkins port` returns 9887
-   - Test `filter_by_tag docker` returns only docker-transport servers
+   - Test `filter_by_tag docker` returns exactly 10 servers (all except airflow and sentry)
+     Note: "docker" is a value in the `tags` array, NOT the transport field.
 
 5. Write `Justfile` with: `test` (runs bats tests), `install` (runs install.sh),
    `lint` (shellcheck on all .sh files).
 
 6. Write `install.sh` — symlinks `bin/mcpf` → `~/.local/bin/mcpf`.
+
+## Completion gate
+
+Run `just test` before finishing. All bats tests must pass. Fix any failures before
+marking this phase done.
 
 ## Constraints
 

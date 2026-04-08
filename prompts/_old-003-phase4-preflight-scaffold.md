@@ -42,3 +42,7 @@ Implement the `preflight` command (used by knowledge-harvester) and
 
 - Preflight JSON must match the schema in the idea file exactly (knowledge-harvester depends on it).
 - `mcpf add` must not overwrite existing server dirs — abort with error if `servers/<name>/` exists.
+
+## Completion gate
+
+Run `just test` before finishing. All bats tests (test_preflight.sh and test_scaffold.sh) must pass.

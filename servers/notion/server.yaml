@@ -1,0 +1,17 @@
+image: mcp-notion
+transport: http
+port: 9888
+container_port: 3000
+endpoint_path: /mcp
+tags:
+  - comms
+  - docker
+env:
+  - name: NOTION_TOKEN
+    op: "op://Private/Notion MCP/INTERNAL_INTEGRATION_TOKEN"
+    cache: "notion/token"
+  - name: OPENAPI_MCP_HEADERS
+    value_template: '{"Authorization":"Bearer ${NOTION_TOKEN}","Notion-Version":"2022-06-28"}'
+health:
+  endpoint: /health
+  timeout: 5

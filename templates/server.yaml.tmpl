@@ -1,0 +1,13 @@
+image: "{{.Image}}"
+transport: {{.Transport}}
+port: {{.Port}}
+container_port: {{.Port}}
+endpoint_path: /mcp
+tags: [{{.TagsCSV}}]
+env: []
+volumes: []
+extra_args: []
+deps: []
+health:
+  endpoint: /health
+  timeout: 5

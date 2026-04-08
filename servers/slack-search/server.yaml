@@ -1,0 +1,15 @@
+image: mcp-slack-search
+transport: http
+port: 9896
+container_port: 9000
+endpoint_path: /mcp
+tags:
+  - comms
+  - docker
+env:
+  - name: SLACK_USER_TOKEN
+    op: "op://Private/Slack Bot Token/user-token"
+    cache: "slack-search/user-token"
+health:
+  endpoint: /health
+  timeout: 5

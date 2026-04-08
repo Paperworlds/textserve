@@ -1,0 +1,183 @@
+servers:
+  jenkins:
+    image: "ghcr.io/lanbaoshen/mcp-jenkins:latest"
+    transport: http
+    port: 9887
+    container_port: 9887
+    endpoint_path: /mcp
+    tags: [ci, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/CI Dev Secrets"
+    health:
+      endpoint: /health
+      timeout: 5
+
+  snowflake:
+    image: "snowflake-mcp"
+    transport: http
+    port: 9890
+    container_port: 9000
+    endpoint_path: /snowflake-mcp
+    tags: [data, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/REDACTED"
+    health:
+      endpoint: /health
+      timeout: 10
+
+  grafana:
+    image: "mcp/grafana"
+    transport: http
+    port: 9891
+    container_port: 8000
+    endpoint_path: /mcp
+    tags: [monitoring, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Grafana Paradigmconnect"
+    health:
+      endpoint: /health
+      timeout: 5
+
+  grafana-pdx:
+    image: "mcp/grafana"
+    transport: http
+    port: 9892
+    container_port: 8000
+    endpoint_path: /mcp
+    tags: [monitoring, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Grafana Paradex"
+    health:
+      endpoint: /health
+      timeout: 5
+
+  notion:
+    image: "mcp-notion"
+    transport: http
+    port: 9888
+    container_port: 3000
+    endpoint_path: /mcp
+    tags: [comms, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Notion MCP"
+    health:
+      endpoint: /health
+      timeout: 5
+
+  airbyte:
+    image: "mcp-airbyte"
+    transport: http
+    port: 9893
+    container_port: 9000
+    endpoint_path: /mcp
+    tags: [data, docker]
+    deps:
+      - cmd: "kubectl get svc airbyte-helmv2-airbyte-server-svc -n airbyte-helmv2"
+        hint: "Run: kubectl port-forward svc/airbyte-helmv2-airbyte-server-svc 18001:8001 -n airbyte-helmv2"
+    auth:
+      type: none
+    health:
+      endpoint: /health
+      timeout: 10
+
+  slack:
+    image: "zencoderai/slack-mcp:latest"
+    transport: http
+    port: 9895
+    container_port: 9000
+    endpoint_path: /mcp
+    tags: [comms, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Slack Bot Token"
+    health:
+      endpoint: /health
+      timeout: 5
+
+  slack-search:
+    image: "mcp-slack-search"
+    transport: http
+    port: 9896
+    container_port: 9000
+    endpoint_path: /mcp
+    tags: [comms, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Slack Bot Token"
+    health:
+      endpoint: /health
+      timeout: 5
+
+  datadog:
+    image: "mcp-datadog"
+    transport: http
+    port: 9897
+    container_port: 9000
+    endpoint_path: /mcp
+    tags: [monitoring, docker]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Datadog API Keys"
+    health:
+      endpoint: /health
+      timeout: 5
+
+  paradex-db:
+    image: "mcp-paradex-db"
+    transport: http
+    port: 9898
+    container_port: 9000
+    endpoint_path: /sse
+    tags: [data, docker]
+    deps:
+      - cmd: "curl -sf https://api.cloudflare.com/cdn-cgi/trace | grep -q 'warp=on'"
+        hint: "Enable Cloudflare WARP before starting paradex-db MCP"
+    auth:
+      type: op
+      item: "op://Private/Paradex DB"
+    health:
+      endpoint: /health
+      timeout: 10
+
+  airflow:
+    transport: native
+    port: 9894
+    endpoint_path: /mcp
+    pid_file: /tmp/.mcp-airflow.pid
+    tags: [data, native]
+    deps:
+      - cmd: "curl -sf https://api.cloudflare.com/cdn-cgi/trace | grep -q 'warp=on'"
+        hint: "Enable Cloudflare WARP before starting airflow MCP"
+      - cmd: "aws sts get-caller-identity --profile paradigm-data.admin"
+        hint: "Run: aws sso login --profile paradigm-data.admin"
+    auth:
+      type: aws
+      profile: paradigm-data.admin
+    health:
+      endpoint: /health
+      timeout: 10
+
+  sentry:
+    transport: stdio
+    managed_by: claude
+    tags: [monitoring, stdio]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Sentry MCP"
+    health:
+      probe: tool-list
+      timeout: 5

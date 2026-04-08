@@ -1,0 +1,24 @@
+image: zencoderai/slack-mcp:latest
+transport: http
+port: 9895
+container_port: 9000
+endpoint_path: /mcp
+tags:
+  - comms
+  - docker
+env:
+  - name: SLACK_BOT_TOKEN
+    op: "op://Private/Slack Bot Token/token"
+    cache: "slack/bot-token"
+  - name: SLACK_TEAM_ID
+    value: "T072ZU3U7"
+  - name: AUTH_TOKEN
+    value: "mcp-slack-local"
+extra_args:
+  - "--transport"
+  - "http"
+  - "--port"
+  - "9000"
+health:
+  endpoint: /health
+  timeout: 5

@@ -1,0 +1,30 @@
+transport: native
+port: 9894
+endpoint_path: /mcp
+pid_file: /tmp/.mcp-airflow.pid
+native_cmd: "python"
+native_venv: "${HOME}/projects/personal/skills/locals/docker/mcp-airflow/.venv"
+native_args:
+  - "${HOME}/projects/personal/skills/locals/docker/mcp-airflow/server.py"
+tags:
+  - data
+  - native
+env:
+  - name: AWS_PROFILE
+    value: "paradigm-data.admin"
+  - name: AWS_REGION
+    value: "us-east-1"
+  - name: MWAA_MCP_READONLY
+    value: "true"
+  - name: FASTMCP_LOG_LEVEL
+    value: "ERROR"
+  - name: MCP_PORT
+    value: "9894"
+deps:
+  - cmd: "curl -sf https://api.cloudflare.com/cdn-cgi/trace | grep -q 'warp=on'"
+    hint: "Enable Cloudflare WARP before starting airflow MCP"
+  - cmd: "aws sts get-caller-identity --profile paradigm-data.admin"
+    hint: "Run: aws sso login --profile paradigm-data.admin"
+health:
+  endpoint: /health
+  timeout: 10
