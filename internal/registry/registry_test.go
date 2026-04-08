@@ -21,7 +21,7 @@ func TestLoad_AllServers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	want := 12
+	want := 11
 	if got := len(r.Servers); got != want {
 		t.Errorf("server count: got %d, want %d", got, want)
 	}
@@ -34,7 +34,7 @@ func TestFilterByTag_Docker(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 	got := r.FilterByTag("docker")
-	want := 10
+	want := 9
 	if len(got) != want {
 		t.Errorf("FilterByTag(docker): got %d servers %v, want %d", len(got), got, want)
 	}

@@ -21,8 +21,8 @@ func TestList_AllServers(t *testing.T) {
 		t.Fatalf("list: %v", err)
 	}
 	lines := nonEmptyLines(out)
-	if len(lines) != 12 {
-		t.Errorf("list: got %d servers, want 12\n%s", len(lines), out)
+	if len(lines) != 11 {
+		t.Errorf("list: got %d servers, want 11\n%s", len(lines), out)
 	}
 }
 
@@ -32,8 +32,8 @@ func TestList_TagDocker(t *testing.T) {
 		t.Fatalf("list --tag docker: %v", err)
 	}
 	lines := nonEmptyLines(out)
-	if len(lines) != 10 {
-		t.Errorf("list --tag docker: got %d servers, want 10\n%s", len(lines), out)
+	if len(lines) != 9 {
+		t.Errorf("list --tag docker: got %d servers, want 9\n%s", len(lines), out)
 	}
 	// airflow and sentry must not appear
 	for _, line := range lines {

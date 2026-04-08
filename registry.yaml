@@ -59,21 +59,6 @@ servers:
       endpoint: /health
       timeout: 5
 
-  notion:
-    image: "mcp-notion"
-    transport: http
-    port: 9888
-    container_port: 3000
-    endpoint_path: /mcp
-    tags: [comms, docker]
-    deps: []
-    auth:
-      type: op
-      item: "op://Private/Notion MCP"
-    health:
-      endpoint: /health
-      timeout: 5
-
   airbyte:
     image: "mcp-airbyte"
     transport: http
