@@ -118,6 +118,15 @@ func (r *FleetRegistry) ListNames() []string {
 }
 
 // FilterByTag returns server names that include the given tag.
+func (r *FleetRegistry) AllNames() []string {
+	names := make([]string, 0, len(r.Servers))
+	for name := range r.Servers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 func (r *FleetRegistry) FilterByTag(tag string) []string {
 	var result []string
 	for name, entry := range r.Servers {

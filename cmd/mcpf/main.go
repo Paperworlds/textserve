@@ -121,7 +121,10 @@ func loadFleet() (*registry.FleetRegistry, string, error) {
 	return fleet, root, nil
 }
 
-func resolveNames(fleet *registry.FleetRegistry, name, tag string) ([]string, error) {
+func resolveNames(fleet *registry.FleetRegistry, name, tag string, all bool) ([]string, error) {
+	if all {
+		return fleet.AllNames(), nil
+	}
 	if name != "" {
 		if _, ok := fleet.Servers[name]; !ok {
 			return nil, fmt.Errorf("unknown server %q", name)
@@ -135,7 +138,7 @@ func resolveNames(fleet *registry.FleetRegistry, name, tag string) ([]string, er
 		}
 		return names, nil
 	}
-	return nil, fmt.Errorf("specify a server name or --tag")
+	return nil, fmt.Errorf("specify a server name, --tag, or --all")
 }
 
 // serverConfig loads servers/<name>/server.yaml, falling back to the registry entry.
@@ -166,6 +169,7 @@ func resolvePreStart(repoRoot string, cfg *registry.ServerConfig) {
 
 func newStartCmd() *cobra.Command {
 	var tag string
+	var all bool
 	cmd := &cobra.Command{
 		Use:   "start [name]",
 		Short: "Start one or more MCP servers",
@@ -179,11 +183,12 @@ func newStartCmd() *cobra.Command {
 			if len(args) > 0 {
 				name = args[0]
 			}
-			names, err := resolveNames(fleet, name, tag)
+			names, err := resolveNames(fleet, name, tag, all)
 			if err != nil {
 				return err
 			}
 
+			var failures []string
 			for _, n := range names {
 				entry := fleet.Servers[n]
 				cfg := serverConfig(repoRoot, n, entry)
@@ -194,37 +199,51 @@ func newStartCmd() *cobra.Command {
 					continue
 				}
 
-				if err := deps.Check(cfg.Deps); err != nil {
-					return fmt.Errorf("%s: %w", n, err)
-				}
+				startErr := func() error {
+					if err := deps.Check(cfg.Deps); err != nil {
+						return fmt.Errorf("%s: %w", n, err)
+					}
+					switch cfg.Transport {
+					case "native":
+						if err := native.Start(n, cfg); err != nil {
+							return fmt.Errorf("start %s: %w", n, err)
+						}
+					default: // http / docker
+						if err := docker.Run(n, cfg); err != nil {
+							return fmt.Errorf("run %s: %w", n, err)
+						}
+					}
+					claude.Deregister(n, cfg) //nolint:errcheck — clear stale entry before re-adding
+					if err := claude.Register(n, cfg); err != nil {
+						return fmt.Errorf("register %s: %w", n, err)
+					}
+					return nil
+				}()
 
-				switch cfg.Transport {
-				case "native":
-					if err := native.Start(n, cfg); err != nil {
-						return fmt.Errorf("start %s: %w", n, err)
+				if startErr != nil {
+					if all {
+						fmt.Fprintf(os.Stderr, "skip %s: %v\n", n, startErr)
+						failures = append(failures, n)
+						continue
 					}
-					if err := claude.Register(n, cfg); err != nil {
-						return fmt.Errorf("register %s: %w", n, err)
-					}
-				default: // http / docker
-					if err := docker.Run(n, cfg); err != nil {
-						return fmt.Errorf("run %s: %w", n, err)
-					}
-					if err := claude.Register(n, cfg); err != nil {
-						return fmt.Errorf("register %s: %w", n, err)
-					}
+					return startErr
 				}
 				fmt.Printf("started %s\n", n)
+			}
+			if len(failures) > 0 {
+				return fmt.Errorf("failed to start: %s", strings.Join(failures, ", "))
 			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&tag, "tag", "", "start all servers with this tag")
+	cmd.Flags().BoolVar(&all, "all", false, "start all servers in the fleet")
 	return cmd
 }
 
 func newStopCmd() *cobra.Command {
 	var tag string
+	var all bool
 	cmd := &cobra.Command{
 		Use:   "stop [name]",
 		Short: "Stop one or more MCP servers",
@@ -238,7 +257,7 @@ func newStopCmd() *cobra.Command {
 			if len(args) > 0 {
 				name = args[0]
 			}
-			names, err := resolveNames(fleet, name, tag)
+			names, err := resolveNames(fleet, name, tag, all)
 			if err != nil {
 				return err
 			}
@@ -272,11 +291,13 @@ func newStopCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&tag, "tag", "", "stop all servers with this tag")
+	cmd.Flags().BoolVar(&all, "all", false, "stop all servers in the fleet")
 	return cmd
 }
 
 func newRestartCmd() *cobra.Command {
 	var tag string
+	var all bool
 	cmd := &cobra.Command{
 		Use:   "restart [name]",
 		Short: "Restart one or more MCP servers",
@@ -290,7 +311,7 @@ func newRestartCmd() *cobra.Command {
 			if len(args) > 0 {
 				name = args[0]
 			}
-			names, err := resolveNames(fleet, name, tag)
+			names, err := resolveNames(fleet, name, tag, all)
 			if err != nil {
 				return err
 			}
@@ -341,6 +362,7 @@ func newRestartCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&tag, "tag", "", "restart all servers with this tag")
+	cmd.Flags().BoolVar(&all, "all", false, "restart all servers in the fleet")
 	return cmd
 }
 
