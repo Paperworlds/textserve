@@ -55,6 +55,7 @@ func buildRoot() *cobra.Command {
 		newStartCmd(),
 		newStopCmd(),
 		newRestartCmd(),
+		newDeregisterCmd(),
 		newLogsCmd(),
 		newListCmd(),
 		newStatusCmd(),
@@ -383,6 +384,44 @@ func newRestartCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&tag, "tag", "", "restart all servers with this tag")
 	cmd.Flags().BoolVar(&all, "all", false, "restart all servers in the fleet")
+	return cmd
+}
+
+func newDeregisterCmd() *cobra.Command {
+	var tag string
+	var all bool
+	cmd := &cobra.Command{
+		Use:   "deregister [name]",
+		Short: "Remove MCP server(s) from Claude without stopping them",
+		Long:  "Deregisters one or all MCP servers from Claude's tool list. Does not stop containers. Use --all for a clean-context chat.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fleet, repoRoot, err := loadFleet()
+			if err != nil {
+				return err
+			}
+			name := ""
+			if len(args) > 0 {
+				name = args[0]
+			}
+			names, err := resolveNames(fleet, name, tag, all)
+			if err != nil {
+				return err
+			}
+			for _, n := range names {
+				entry := fleet.Servers[n]
+				cfg := serverConfig(repoRoot, n, entry)
+				if err := claude.Deregister(n, cfg); err != nil {
+					fmt.Fprintf(os.Stderr, "deregister %s: %v\n", n, err)
+					continue
+				}
+				fmt.Printf("deregistered %s\n", n)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&tag, "tag", "", "deregister all servers with this tag")
+	cmd.Flags().BoolVar(&all, "all", false, "deregister all servers (clean context)")
 	return cmd
 }
 
