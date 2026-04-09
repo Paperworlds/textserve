@@ -296,15 +296,16 @@ func newStopCmd() *cobra.Command {
 					fmt.Fprintf(os.Stderr, "deregister %s: %v\n", n, err)
 				}
 
+				var stopErr error
 				switch cfg.Transport {
 				case "native":
-					if err := native.Stop(n, cfg); err != nil {
-						return fmt.Errorf("stop %s: %w", n, err)
-					}
+					stopErr = native.Stop(n, cfg)
 				default:
-					if err := docker.Stop(n); err != nil {
-						return fmt.Errorf("stop %s: %w", n, err)
-					}
+					stopErr = docker.Stop(n)
+				}
+				if stopErr != nil {
+					fmt.Fprintf(os.Stderr, "stop %s: %v\n", n, stopErr)
+					continue
 				}
 				fmt.Printf("stopped %s\n", n)
 			}
