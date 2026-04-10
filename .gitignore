@@ -2,3 +2,4 @@ bin/mcpf
 mcpf
 logs/
 reports/
+tests/__pycache__/
