@@ -47,7 +47,7 @@ its prerequisite check fails — fix the blocker first.
 
 - graphk source must not be broken — add `graph_mcp/` alongside existing `graphk/` package
 - Do not modify memory file bodies — frontmatter only
-- `mcpf health graph-mcp` is the health gate before proceeding to Phase 7+
+- `mcpf health graph` is the health gate before proceeding to Phase 7+
 - `graphk ingest` must be idempotent — safe to re-run
 - All new Python code uses the same Python version as graphk (check `python --version` in graphk venv)
 - graph-mcp MCP server uses the `mcp` Python SDK (stdio transport)

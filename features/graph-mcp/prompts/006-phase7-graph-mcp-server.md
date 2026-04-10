@@ -127,8 +127,8 @@ Run `uv sync` inside the graphk source dir to install it.
 
 ```bash
 cd ~/projects/personal/mcp-fleet
-./bin/mcpf start graph-mcp
-./bin/mcpf health graph-mcp     # must be healthy
+./bin/mcpf start graph
+./bin/mcpf health graph     # must be healthy
 ./bin/mcpf status               # graph-mcp appears in list
 ```
 
@@ -145,14 +145,14 @@ cd ~/projects/personal/mcp-fleet
 
 - Server must start via `python -m graph_mcp` from the graphk source dir
 - All tools must return JSON-serializable dicts or lists
-- `mcpf health graph-mcp` must pass (PID file exists and process is alive)
+- `mcpf health graph` must pass (PID file exists and process is alive)
 - Do not modify existing graphk query commands — only add the new MCP layer on top
 
 ## Completion gate
 
 ```bash
-./bin/mcpf start graph-mcp
-./bin/mcpf health graph-mcp     # exit 0
+./bin/mcpf start graph
+./bin/mcpf health graph     # exit 0
 python -m pytest graph_mcp/tests/  # all pass
 # In a separate terminal, test via MCP protocol:
 echo '{"method":"tools/list"}' | python -m graph_mcp  # returns tool list

@@ -27,7 +27,7 @@ token saving via ai-proxy.
 
 Before starting:
 ```bash
-./bin/mcpf health graph-mcp   # must be healthy
+./bin/mcpf health graph   # must be healthy
 graphk query type feedback     # must return results
 ```
 
@@ -139,7 +139,7 @@ Document the rollback steps in `reports/phase8-token-baseline.md`.
 ```bash
 # New Claude session opens with stubbed memory (MEMORY.md = 3 lines)
 # graph-mcp is healthy
-./bin/mcpf health graph-mcp
+./bin/mcpf health graph
 
 # Claude can retrieve knowledge on demand:
 # "What feedback do we have about Go testing?" → search returns results

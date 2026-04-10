@@ -5,7 +5,7 @@ Manual testing steps to verify the graph-mcp integration end to end.
 ## Prerequisites
 
 ```bash
-mcpf health graph-mcp     # must be healthy
+mcpf health graph     # must be healthy
 claude mcp list           # graph-mcp must show ✓ Connected
 cat ~/.claude-work/memory/MEMORY.md   # must be the 3-line stub
 ```

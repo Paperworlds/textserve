@@ -26,7 +26,7 @@ Workers get a focused tool surface instead of the full fleet.
 ## Prerequisite check
 
 ```bash
-./bin/mcpf health graph-mcp         # must be healthy
+./bin/mcpf health graph         # must be healthy
 graphk query type toolmap           # must return results (populated in Phase 6)
 ```
 
@@ -173,5 +173,5 @@ cat reports/phase9-tool-selection.md  # shows token reduction
 # Fallback works:
 ./bin/mcpf stop graph-mcp
 pp run 003   # should warn but not fail
-./bin/mcpf start graph-mcp
+./bin/mcpf start graph
 ```
