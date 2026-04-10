@@ -15,6 +15,7 @@ defaults:
   budget_usd: 2.00
   max_turns: 100
   claude_cmd: claude-work
+  terse: true
 
 max_parallel: 1
 total_budget_usd: 30.00
