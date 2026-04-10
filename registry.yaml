@@ -167,7 +167,7 @@ servers:
       probe: tool-list
       timeout: 5
 
-  graph-mcp:
+  graph:
     transport: native
     tags: [native, knowledge, memory]
     deps: []
