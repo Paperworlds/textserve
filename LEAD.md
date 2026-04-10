@@ -64,6 +64,14 @@ Run `pp status` to see which phase is next.
 Run `pp run` to execute the next pending phase.
 Run `go test ./...` + `just build` to verify current state.
 
+## Running pp in the background
+
+Always use the Bash tool's `run_in_background: true` parameter when launching
+`pp run <id>` — never use shell `&`. This lets the lead session stay responsive
+and get notified when the task completes.
+
+After launching, poll with `pp status` or `pp log <id>` to check progress.
+
 ## Known issues to watch for in remaining phases
 
 - Phase 3: `docker.ResolveEnv` must process env entries in order (value_template

@@ -80,3 +80,11 @@ pp run 008   # Phase 9 — pp tool selection integration
 
 Each prompt has a **Prerequisite check** and a **Completion gate** — verify both
 before marking a phase done.
+
+## Running pp in the background
+
+Always use the Bash tool's `run_in_background: true` parameter when launching
+`pp run <id>` — never use shell `&`. This lets the lead session stay responsive
+and get notified when the task completes.
+
+After launching, poll with `pp status` or `pp log <id>` to check progress.

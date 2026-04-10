@@ -43,6 +43,7 @@ func Start(name string, cfg *registry.ServerConfig) error {
 
 	cmd := exec.Command(cfg.NativeCmd, args...)
 	cmd.Env = env
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 

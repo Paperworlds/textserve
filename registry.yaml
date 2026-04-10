@@ -166,3 +166,11 @@ servers:
     health:
       probe: tool-list
       timeout: 5
+
+  graph-mcp:
+    transport: native
+    tags: [native, knowledge, memory]
+    deps: []
+    health:
+      probe: pid
+      timeout: 5
