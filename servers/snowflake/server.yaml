@@ -20,6 +20,8 @@ volumes:
   - host: "${HOME}/.mcp/snowflake-tools.yaml"
     container: "/app/services/tools_config.yaml"
     readonly: true
+headers:
+  - "Authorization: Bearer snowflake-internal"
 health:
   probe: tcp
   timeout: 10

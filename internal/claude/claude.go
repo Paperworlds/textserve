@@ -42,9 +42,19 @@ func Register(name string, cfg *registry.ServerConfig) error {
 		c.Stderr = os.Stderr
 		return c.Run()
 	}
-	url := fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath)
-	c := exec.Command("claude", "mcp", "add", "--transport", "http", "--scope", "user", name, url)
+	c := exec.Command("claude", registerArgs(name, cfg)...)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
+}
+
+// registerArgs builds the `claude mcp add` argument list for an HTTP server.
+// Exported for testing.
+func registerArgs(name string, cfg *registry.ServerConfig) []string {
+	url := fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath)
+	args := []string{"mcp", "add", "--transport", "http", "--scope", "user"}
+	for _, h := range cfg.Headers {
+		args = append(args, "--header", h)
+	}
+	return append(args, name, url)
 }

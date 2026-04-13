@@ -41,7 +41,18 @@ func Start(name string, cfg *registry.ServerConfig) error {
 		args[i] = os.ExpandEnv(a)
 	}
 
-	cmd := exec.Command(cfg.NativeCmd, args...)
+	// If a venv is configured, resolve the command against the venv's bin dir
+	// so the venv Python (not the system Python) is used. exec.Command resolves
+	// executables using the parent's PATH, not cmd.Env, so we must do this explicitly.
+	nativeCmd := cfg.NativeCmd
+	if cfg.NativeVenv != "" {
+		venvBin := filepath.Join(os.ExpandEnv(cfg.NativeVenv), "bin")
+		candidate := filepath.Join(venvBin, cfg.NativeCmd)
+		if _, err := os.Stat(candidate); err == nil {
+			nativeCmd = candidate
+		}
+	}
+	cmd := exec.Command(nativeCmd, args...)
 	cmd.Env = env
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stderr

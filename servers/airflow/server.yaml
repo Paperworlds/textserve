@@ -21,7 +21,7 @@ env:
   - name: MCP_PORT
     value: "9894"
 deps:
-  - cmd: "curl -sf https://api.cloudflare.com/cdn-cgi/trace | grep -q 'warp=on'"
+  - cmd: "warp-cli status | grep -q 'Connected'"
     hint: "Enable Cloudflare WARP before starting airflow MCP"
   - cmd: "aws sts get-caller-identity --profile paradigm-data.admin"
     hint: "Run: aws sso login --profile paradigm-data.admin"

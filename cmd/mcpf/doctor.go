@@ -102,7 +102,7 @@ func runDoctor(out io.Writer) error {
 		if sc.Image == "" || sc.Transport == "native" || sc.Transport == "stdio" {
 			continue
 		}
-		if err := exec.Command("docker", "manifest", "inspect", sc.Image).Run(); err != nil {
+		if err := exec.Command("docker", "image", "inspect", sc.Image).Run(); err != nil {
 			warn(fmt.Sprintf("image %s not found in local registry (pull needed)", sc.Image))
 		}
 	}

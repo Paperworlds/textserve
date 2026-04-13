@@ -31,7 +31,7 @@ volumes:
     container: "/root/.aws/sso"
     readonly: true
 deps:
-  - cmd: "curl -sf https://api.cloudflare.com/cdn-cgi/trace | grep -q 'warp=on'"
+  - cmd: "warp-cli status | grep -q 'Connected'"
     hint: "Enable Cloudflare WARP before starting paradex-db MCP"
 health:
   endpoint: /health
