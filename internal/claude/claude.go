@@ -1,55 +1,119 @@
 package claude
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/pdonorio/mcp-fleet/internal/registry"
 )
 
-// Deregister removes the server from Claude's MCP config via `claude mcp remove`.
-// Tries both local and project scopes so it works regardless of where it was registered.
-// For stdio servers managed by Claude this is a no-op.
-func Deregister(name string, cfg *registry.ServerConfig) error {
-	if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
-		fmt.Printf("%s is managed by Claude — no action needed\n", name)
-		return nil
-	}
-	// Remove from both scopes; ignore errors (server may not exist in a scope).
-	for _, scope := range []string{"local", "project", "user"} {
-		exec.Command("claude", "mcp", "remove", name, "-s", scope).Run() //nolint:errcheck
-	}
-	return nil
+// configPath returns the absolute path to the user-scoped Claude config.
+func configPath() string {
+	home := os.Getenv("HOME")
+	return filepath.Join(home, ".claude-work", ".claude.json")
 }
 
-// Register adds the server to Claude's user-scoped MCP config via `claude mcp add`.
-// Uses --scope user so the registration is visible across all projects.
-// For stdio servers managed by Claude this is a no-op.
-// For native servers with no port, registers as stdio with the native_cmd + native_args.
+// claudeConfig represents the subset of .claude.json we care about.
+type claudeConfig struct {
+	raw        map[string]any
+	mcpServers map[string]any
+}
+
+func loadConfig() (*claudeConfig, error) {
+	path := configPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
+	}
+	servers, _ := raw["mcpServers"].(map[string]any)
+	if servers == nil {
+		servers = make(map[string]any)
+		raw["mcpServers"] = servers
+	}
+	return &claudeConfig{raw: raw, mcpServers: servers}, nil
+}
+
+func (c *claudeConfig) save() error {
+	path := configPath()
+	data, err := json.MarshalIndent(c.raw, "", "    ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+	data = append(data, '\n')
+	return os.WriteFile(path, data, 0o644)
+}
+
+// mcpEntry builds the JSON entry for a server.
+type mcpEntry struct {
+	Type    string            `json:"type"`
+	URL     string            `json:"url,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
+}
+
+// Deregister removes the server from the user-scoped Claude MCP config.
+func Deregister(name string, cfg *registry.ServerConfig) error {
+	if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
+		return nil
+	}
+	c, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	delete(c.mcpServers, name)
+	return c.save()
+}
+
+// Register adds the server to the user-scoped Claude MCP config.
+// Writes directly to ~/.claude-work/.claude.json — no shelling out to `claude` CLI.
 func Register(name string, cfg *registry.ServerConfig) error {
 	if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
 		fmt.Printf("%s is managed by Claude — no action needed\n", name)
 		return nil
 	}
-	// Native server with no port: register as stdio so Claude can spawn it directly.
-	// Use -- to prevent native_args flags (e.g. -m) from being parsed as claude options.
-	if cfg.Transport == "native" && cfg.Port == 0 && cfg.NativeCmd != "" {
-		cmdArgs := []string{"mcp", "add", "--transport", "stdio", "--scope", "user", name, "--", cfg.NativeCmd}
-		cmdArgs = append(cmdArgs, cfg.NativeArgs...)
-		c := exec.Command("claude", cmdArgs...)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		return c.Run()
+
+	c, err := loadConfig()
+	if err != nil {
+		return err
 	}
-	c := exec.Command("claude", registerArgs(name, cfg)...)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
+
+	entry := mcpEntry{
+		Type: "http",
+		URL:  fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath),
+	}
+
+	// Parse "Key: Value" header strings into a map.
+	if len(cfg.Headers) > 0 {
+		entry.Headers = make(map[string]string, len(cfg.Headers))
+		for _, h := range cfg.Headers {
+			parts := strings.SplitN(h, ": ", 2)
+			if len(parts) == 2 {
+				entry.Headers[parts[0]] = parts[1]
+			}
+		}
+	}
+
+	// Convert struct to map[string]any for JSON merge.
+	entryJSON, _ := json.Marshal(entry)
+	var entryMap map[string]any
+	json.Unmarshal(entryJSON, &entryMap) //nolint:errcheck
+	c.mcpServers[name] = entryMap
+
+	if err := c.save(); err != nil {
+		return err
+	}
+	fmt.Printf("registered %s → %s (user config)\n", name, entry.URL)
+	return nil
 }
 
 // registerArgs builds the `claude mcp add` argument list for an HTTP server.
-// Exported for testing.
+// Kept for tests — no longer used in production.
 func registerArgs(name string, cfg *registry.ServerConfig) []string {
 	url := fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath)
 	args := []string{"mcp", "add", "--transport", "http", "--scope", "user"}
