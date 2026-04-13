@@ -226,6 +226,10 @@ func newStartCmd() *cobra.Command {
 					}
 					switch cfg.Transport {
 					case "native":
+						// Stop any existing process before starting a new one.
+						if status, _ := native.Status(n, cfg); status == "running" {
+							_ = native.Stop(n, cfg)
+						}
 						if err := native.Start(n, cfg); err != nil {
 							return fmt.Errorf("start %s: %w", n, err)
 						}
