@@ -174,3 +174,14 @@ servers:
     health:
       probe: pid
       timeout: 5
+
+  datadog-security:
+    transport: stdio
+    managed_by: claude
+    tags: [security, stdio]
+    deps: []
+    auth:
+      type: none
+    health:
+      probe: tool-list
+      timeout: 10

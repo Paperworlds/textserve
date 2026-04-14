@@ -1,0 +1,18 @@
+transport: stdio
+managed_by: claude
+command: datadog-code-security-mcp
+args: [start]
+tags: [security, stdio]
+deps:
+  - cmd: "which datadog-code-security-mcp"
+    hint: "Run: brew install datadog-labs/pack/datadog-code-security-mcp"
+env:
+  - name: DD_API_KEY
+    value: "op://Private/Datadog API Keys/api-key"
+  - name: DD_APP_KEY
+    value: "op://Private/Datadog API Keys/app-key"
+  - name: DD_SITE
+    value: "datadoghq.com"
+health:
+  probe: tool-list
+  timeout: 10
