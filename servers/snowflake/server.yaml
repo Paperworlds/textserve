@@ -1,5 +1,6 @@
 image: snowflake-mcp
-transport: http
+protocol: http
+runtime: docker
 port: 9890
 container_port: 9000
 endpoint_path: /snowflake-mcp

@@ -21,8 +21,8 @@ func TestList_AllServers(t *testing.T) {
 		t.Fatalf("list: %v", err)
 	}
 	lines := nonEmptyLines(out)
-	if len(lines) != 11 {
-		t.Errorf("list: got %d servers, want 11\n%s", len(lines), out)
+	if len(lines) != 13 {
+		t.Errorf("list: got %d servers, want 13\n%s", len(lines), out)
 	}
 }
 

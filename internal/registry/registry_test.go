@@ -21,7 +21,7 @@ func TestLoad_AllServers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	want := 12
+	want := 13
 	if got := len(r.Servers); got != want {
 		t.Errorf("server count: got %d, want %d", got, want)
 	}

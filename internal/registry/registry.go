@@ -43,7 +43,8 @@ type Health struct {
 // ServerConfig is the full per-server configuration (servers/<name>/server.yaml).
 type ServerConfig struct {
 	Image         string   `yaml:"image,omitempty"`
-	Transport     string   `yaml:"transport"`
+	Protocol      string   `yaml:"protocol"`
+	Runtime       string   `yaml:"runtime"`
 	Port          int      `yaml:"port,omitempty"`
 	ContainerPort int      `yaml:"container_port,omitempty"`
 	EndpointPath  string   `yaml:"endpoint_path,omitempty"`
@@ -59,21 +60,20 @@ type ServerConfig struct {
 	NativeVenv    string   `yaml:"native_venv,omitempty"`
 	Deps          []Dep    `yaml:"deps,omitempty"`
 	Health        Health   `yaml:"health,omitempty"`
-	ManagedBy     string   `yaml:"managed_by,omitempty"`
 	Headers       []string `yaml:"headers,omitempty"`
 }
 
 // RegistryEntry is a single entry in registry.yaml.
 type RegistryEntry struct {
 	Image         string   `yaml:"image,omitempty"`
-	Transport     string   `yaml:"transport"`
+	Protocol      string   `yaml:"protocol"`
+	Runtime       string   `yaml:"runtime"`
 	Port          int      `yaml:"port,omitempty"`
 	ContainerPort int      `yaml:"container_port,omitempty"`
 	EndpointPath  string   `yaml:"endpoint_path,omitempty"`
 	Tags          []string `yaml:"tags,omitempty"`
 	Deps          []Dep    `yaml:"deps,omitempty"`
 	Health        Health   `yaml:"health,omitempty"`
-	ManagedBy     string   `yaml:"managed_by,omitempty"`
 }
 
 // FleetRegistry is the top-level registry.yaml structure.

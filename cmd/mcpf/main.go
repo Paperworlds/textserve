@@ -168,14 +168,14 @@ func serverConfig(repoRoot, name string, entry registry.RegistryEntry) *registry
 	if err != nil {
 		return &registry.ServerConfig{
 			Image:         entry.Image,
-			Transport:     entry.Transport,
+			Protocol:      entry.Protocol,
+			Runtime:       entry.Runtime,
 			Port:          entry.Port,
 			ContainerPort: entry.ContainerPort,
 			EndpointPath:  entry.EndpointPath,
 			Tags:          entry.Tags,
 			Deps:          entry.Deps,
 			Health:        entry.Health,
-			ManagedBy:     entry.ManagedBy,
 		}
 	}
 	return sc
@@ -215,7 +215,7 @@ func newStartCmd() *cobra.Command {
 				cfg := serverConfig(repoRoot, n, entry)
 				resolvePreStart(repoRoot, cfg)
 
-				if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
+				if cfg.Runtime == "claude" {
 					fmt.Printf("%s is managed by Claude — no action needed\n", n)
 					continue
 				}
@@ -224,8 +224,8 @@ func newStartCmd() *cobra.Command {
 					if err := deps.Check(cfg.Deps); err != nil {
 						return fmt.Errorf("%s: %w", n, err)
 					}
-					switch cfg.Transport {
-					case "native":
+					switch cfg.Runtime {
+					case "process":
 						// Stop any existing process before starting a new one.
 						if status, _ := native.Status(n, cfg); status == "running" {
 							_ = native.Stop(n, cfg)
@@ -233,7 +233,7 @@ func newStartCmd() *cobra.Command {
 						if err := native.Start(n, cfg); err != nil {
 							return fmt.Errorf("start %s: %w", n, err)
 						}
-					default: // http / docker
+					default: // docker
 						if err := docker.Run(n, cfg); err != nil {
 							return fmt.Errorf("run %s: %w", n, err)
 						}
@@ -291,7 +291,7 @@ func newStopCmd() *cobra.Command {
 				entry := fleet.Servers[n]
 				cfg := serverConfig(repoRoot, n, entry)
 
-				if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
+				if cfg.Runtime == "claude" {
 					fmt.Printf("%s is managed by Claude — no action needed\n", n)
 					continue
 				}
@@ -301,8 +301,8 @@ func newStopCmd() *cobra.Command {
 				}
 
 				var stopErr error
-				switch cfg.Transport {
-				case "native":
+				switch cfg.Runtime {
+				case "process":
 					stopErr = native.Stop(n, cfg)
 				default:
 					stopErr = docker.Stop(n)
@@ -347,7 +347,7 @@ func newRestartCmd() *cobra.Command {
 				cfg := serverConfig(repoRoot, n, entry)
 				resolvePreStart(repoRoot, cfg)
 
-				if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
+				if cfg.Runtime == "claude" {
 					fmt.Printf("%s is managed by Claude — no action needed\n", n)
 					continue
 				}
@@ -356,8 +356,8 @@ func newRestartCmd() *cobra.Command {
 				if err := claude.Deregister(n, cfg); err != nil {
 					fmt.Fprintf(os.Stderr, "deregister %s: %v\n", n, err)
 				}
-				switch cfg.Transport {
-				case "native":
+				switch cfg.Runtime {
+				case "process":
 					_ = native.Stop(n, cfg)
 				default:
 					_ = docker.Stop(n)
@@ -369,8 +369,8 @@ func newRestartCmd() *cobra.Command {
 				}
 
 				// Start phase.
-				switch cfg.Transport {
-				case "native":
+				switch cfg.Runtime {
+				case "process":
 					if err := native.Start(n, cfg); err != nil {
 						return fmt.Errorf("restart %s: %w", n, err)
 					}

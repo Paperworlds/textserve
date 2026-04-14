@@ -1,5 +1,5 @@
-transport: stdio
-managed_by: claude
+protocol: stdio
+runtime: claude
 command: datadog-code-security-mcp
 args: [start]
 tags: [security, stdio]

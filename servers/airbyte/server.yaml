@@ -1,5 +1,6 @@
 image: mcp-airbyte
-transport: http
+protocol: http
+runtime: docker
 port: 9893
 container_port: 9000
 endpoint_path: /mcp

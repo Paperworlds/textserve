@@ -58,14 +58,14 @@ func runDoctor(out io.Writer) error {
 			entry := fleet.Servers[n]
 			sc = &registry.ServerConfig{
 				Image:         entry.Image,
-				Transport:     entry.Transport,
+				Protocol:      entry.Protocol,
+				Runtime:       entry.Runtime,
 				Port:          entry.Port,
 				ContainerPort: entry.ContainerPort,
 				EndpointPath:  entry.EndpointPath,
 				Tags:          entry.Tags,
 				Deps:          entry.Deps,
 				Health:        entry.Health,
-				ManagedBy:     entry.ManagedBy,
 			}
 			badConfigs = append(badConfigs, n)
 		}
@@ -99,7 +99,7 @@ func runDoctor(out io.Writer) error {
 	// 4. Image availability (docker servers only — warns, does not fail)
 	for _, n := range names {
 		sc := configs[n]
-		if sc.Image == "" || sc.Transport == "native" || sc.Transport == "stdio" {
+		if sc.Image == "" || sc.Runtime == "process" || sc.Runtime == "claude" {
 			continue
 		}
 		if err := exec.Command("docker", "image", "inspect", sc.Image).Run(); err != nil {

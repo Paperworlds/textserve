@@ -19,7 +19,8 @@ func setupAddTestRepo(t *testing.T) string {
 
 	registryContent := `servers:
   existing:
-    transport: http
+    protocol: http
+    runtime: docker
     port: 9887
     tags: [ci, docker]
     deps: []
@@ -54,11 +55,12 @@ func TestAddCreatesExpectedFiles(t *testing.T) {
 	}
 
 	data := addTemplateData{
-		Name:      name,
-		Image:     "my-image",
-		Transport: "http",
-		Port:      port,
-		TagsCSV:   "ci, docker",
+		Name:     name,
+		Image:    "my-image",
+		Protocol: "http",
+		Runtime:  "docker",
+		Port:     port,
+		TagsCSV:  "ci, docker",
 	}
 
 	if err := os.MkdirAll(serverDir, 0o755); err != nil {
@@ -104,8 +106,11 @@ func TestAddCreatesExpectedFiles(t *testing.T) {
 	if err := yaml.Unmarshal(yamlData, &sc); err != nil {
 		t.Fatalf("parse server.yaml: %v", err)
 	}
-	if sc["transport"] != "http" {
-		t.Errorf("transport: got %v want http", sc["transport"])
+	if sc["protocol"] != "http" {
+		t.Errorf("protocol: got %v want http", sc["protocol"])
+	}
+	if sc["runtime"] != "docker" {
+		t.Errorf("runtime: got %v want docker", sc["runtime"])
 	}
 	if sc["image"] != "my-image" {
 		t.Errorf("image: got %v want my-image", sc["image"])

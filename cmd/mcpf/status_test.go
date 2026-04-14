@@ -54,8 +54,8 @@ func TestBuildSummary_SomeUnhealthy(t *testing.T) {
 
 func TestStatusJSONSchema(t *testing.T) {
 	rows := []serverRow{
-		{name: "jenkins", transport: "http", port: "9887", status: "healthy", uptime: "1h"},
-		{name: "airbyte", transport: "http", port: "9893", status: "unhealthy", uptime: "-"},
+		{name: "jenkins", mode: "docker", port: "9887", status: "healthy", uptime: "1h"},
+		{name: "airbyte", mode: "docker", port: "9893", status: "unhealthy", uptime: "-"},
 	}
 	s := buildSummary(rows)
 
@@ -108,7 +108,7 @@ func TestWriteSummaryFile(t *testing.T) {
 
 func TestPrintStatusTable_NoError(t *testing.T) {
 	rows := []serverRow{
-		{name: "jenkins", transport: "http", port: "9887", status: "healthy", uptime: "1h"},
+		{name: "jenkins", mode: "docker", port: "9887", status: "healthy", registered: true, uptime: "1h"},
 	}
 	cmd := buildRoot()
 	var buf bytes.Buffer

@@ -1,5 +1,6 @@
 image: mcp-slack-search
-transport: http
+protocol: http
+runtime: docker
 port: 9896
 container_port: 9000
 endpoint_path: /mcp

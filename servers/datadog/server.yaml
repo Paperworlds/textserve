@@ -1,5 +1,6 @@
 image: mcp-datadog
-transport: http
+protocol: http
+runtime: docker
 port: 9897
 container_port: 9000
 endpoint_path: /mcp

@@ -39,7 +39,8 @@ func TestRegister_WritesJSON(t *testing.T) {
 	defer cleanup()
 
 	cfg := &registry.ServerConfig{
-		Transport:    "http",
+		Protocol:     "http",
+		Runtime:      "docker",
 		Port:         9894,
 		EndpointPath: "/mcp",
 	}
@@ -65,7 +66,8 @@ func TestRegister_WithHeaders(t *testing.T) {
 	defer cleanup()
 
 	cfg := &registry.ServerConfig{
-		Transport:    "http",
+		Protocol:     "http",
+		Runtime:      "docker",
 		Port:         9890,
 		EndpointPath: "/snowflake-mcp",
 		Headers:      []string{"Authorization: Bearer snowflake-internal"},
@@ -90,7 +92,8 @@ func TestDeregister_RemovesEntry(t *testing.T) {
 	defer cleanup()
 
 	cfg := &registry.ServerConfig{
-		Transport:    "http",
+		Protocol:     "http",
+		Runtime:      "docker",
 		Port:         9894,
 		EndpointPath: "/mcp",
 	}
@@ -111,8 +114,8 @@ func TestRegister_PreservesExisting(t *testing.T) {
 	defer cleanup()
 
 	// Register two servers
-	cfg1 := &registry.ServerConfig{Transport: "http", Port: 9890, EndpointPath: "/snowflake-mcp"}
-	cfg2 := &registry.ServerConfig{Transport: "http", Port: 9894, EndpointPath: "/mcp"}
+	cfg1 := &registry.ServerConfig{Protocol: "http", Runtime: "docker", Port: 9890, EndpointPath: "/snowflake-mcp"}
+	cfg2 := &registry.ServerConfig{Protocol: "http", Runtime: "docker", Port: 9894, EndpointPath: "/mcp"}
 	Register("snowflake", cfg1)
 	Register("airflow", cfg2)
 
@@ -125,10 +128,49 @@ func TestRegister_PreservesExisting(t *testing.T) {
 	}
 }
 
+func TestRegister_StdioProcess(t *testing.T) {
+	cleanup := setupFakeConfig(t)
+	defer cleanup()
+
+	cfg := &registry.ServerConfig{
+		Protocol:  "stdio",
+		Runtime:   "process",
+		NativeCmd: "python",
+		NativeArgs: []string{"-m", "graph_mcp"},
+		Env: []registry.EnvVar{
+			{Name: "GRAPH_MCP_DAEMON", Value: "1"},
+			{Name: "FASTMCP_LOG_LEVEL", Value: "ERROR"},
+		},
+	}
+	if err := Register("graph", cfg); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	servers := readMcpServers(t)
+	entry, ok := servers["graph"].(map[string]any)
+	if !ok {
+		t.Fatalf("graph not found in mcpServers: %v", servers)
+	}
+	if got := entry["type"]; got != "stdio" {
+		t.Errorf("type: got %q, want \"stdio\"", got)
+	}
+	if got := entry["command"]; got != "python" {
+		t.Errorf("command: got %q, want \"python\"", got)
+	}
+	if _, hasURL := entry["url"]; hasURL {
+		t.Error("stdio entry must not have url field")
+	}
+	env, _ := entry["env"].(map[string]any)
+	if env["GRAPH_MCP_DAEMON"] != "1" {
+		t.Errorf("env[GRAPH_MCP_DAEMON]: got %q", env["GRAPH_MCP_DAEMON"])
+	}
+}
+
 // Legacy tests for registerArgs (no longer used in prod but kept for reference)
 func TestRegisterArgs_NoHeaders(t *testing.T) {
 	cfg := &registry.ServerConfig{
-		Transport:    "http",
+		Protocol:     "http",
+		Runtime:      "docker",
 		Port:         9890,
 		EndpointPath: "/snowflake-mcp",
 	}

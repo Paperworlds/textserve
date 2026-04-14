@@ -1,5 +1,6 @@
 image: ghcr.io/lanbaoshen/mcp-jenkins:latest
-transport: http
+protocol: http
+runtime: docker
 port: 9887
 container_port: 9887
 endpoint_path: /mcp

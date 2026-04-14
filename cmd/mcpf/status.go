@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
+	mcpClaude "github.com/pdonorio/mcp-fleet/internal/claude"
 	"github.com/pdonorio/mcp-fleet/internal/health"
 	"github.com/pdonorio/mcp-fleet/internal/registry"
 )
@@ -29,11 +29,13 @@ type StatusSummary struct {
 
 // serverRow holds per-server status for the table display.
 type serverRow struct {
-	name      string
-	transport string
-	port      string
-	status    string
-	uptime    string
+	name       string
+	mode       string
+	port       string
+	status     string
+	registered bool
+	uptime     string
+	runtime    string
 }
 
 // ProbeFunc is the health probe signature used by the status command.
@@ -76,12 +78,16 @@ func newStatusCmd() *cobra.Command {
 						portStr = strconv.Itoa(cfg.Port)
 					}
 
+					mode := cfg.Runtime
+
 					row := serverRow{
-						name:      name,
-						transport: cfg.Transport,
-						port:      portStr,
-						status:    status,
-						uptime:    uptimeFor(name, cfg),
+						name:       name,
+						mode:       mode,
+						port:       portStr,
+						status:     status,
+						registered: mcpClaude.IsRegistered(name),
+						uptime:     uptimeFor(name, cfg),
+						runtime:    cfg.Runtime,
 					}
 					mu.Lock()
 					rows[idx] = row
@@ -133,13 +139,51 @@ func buildSummary(rows []serverRow) StatusSummary {
 	}
 }
 
+// ANSI color helpers.
+const (
+	colorReset  = "\033[0m"
+	colorGreen  = "\033[32m"
+	colorRed    = "\033[31m"
+	colorCyan   = "\033[36m"
+	colorYellow = "\033[33m"
+	colorDim    = "\033[2m"
+)
+
 func printStatusTable(cmd *cobra.Command, rows []serverRow) {
-	tw := tablewriter.NewWriter(cmd.OutOrStdout())
-	tw.Header("NAME", "TRANSPORT", "PORT", "STATUS", "UPTIME")
+	w := cmd.OutOrStdout()
+	// Header
+	fmt.Fprintf(w, "%-18s %-10s   %-16s %s   %-6s %s\n",
+		"SERVER", "MODE", "STATUS", "REG", "PORT", "UPTIME")
+	// Underline
+	fmt.Fprintf(w, "%-18s %-10s   %-16s %s   %-6s %s\n",
+		"──────", "────", "──────", "───", "────", "──────")
+
 	for _, r := range rows {
-		_ = tw.Append([]string{r.name, r.transport, r.port, r.status, r.uptime})
+		statusStr := formatStatus(r.status, r.runtime)
+		regStr := formatReg(r.registered)
+		fmt.Fprintf(w, "%-18s %-10s   %s %s   %-6s %s\n",
+			r.name, r.mode, statusStr, regStr, r.port, r.uptime)
 	}
-	_ = tw.Render()
+}
+
+func formatStatus(status, runtime string) string {
+	switch {
+	case status == "healthy":
+		return fmt.Sprintf("%s● running%s ", colorGreen, colorReset)
+	case runtime == "claude":
+		return fmt.Sprintf("%s◆ claude%s  ", colorCyan, colorReset)
+	case status == "unhealthy":
+		return fmt.Sprintf("○ stopped  ")
+	default:
+		return fmt.Sprintf("○ unknown  ")
+	}
+}
+
+func formatReg(registered bool) string {
+	if registered {
+		return fmt.Sprintf("%s✓%s", colorGreen, colorReset)
+	}
+	return fmt.Sprintf("%s✗%s", colorRed, colorReset)
 }
 
 func writeSummaryFile(s StatusSummary) error {
@@ -157,10 +201,10 @@ func writeSummaryFile(s StatusSummary) error {
 
 // uptimeFor returns a human-readable uptime string for the given server.
 func uptimeFor(name string, cfg *registry.ServerConfig) string {
-	switch cfg.Transport {
-	case "stdio":
+	switch cfg.Runtime {
+	case "claude":
 		return "-"
-	case "native":
+	case "process":
 		return nativeUptime(cfg)
 	default:
 		return dockerUptime(name)

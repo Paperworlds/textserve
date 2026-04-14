@@ -89,37 +89,49 @@ func ProbeTCP(cfg *registry.ServerConfig) error {
 	return nil
 }
 
-// Probe dispatches to the appropriate probe based on transport and config.
+// Probe dispatches to the appropriate probe based on runtime and config.
 // Returns ("healthy", nil), ("unhealthy", err), or ("unknown", nil).
 func Probe(name string, cfg *registry.ServerConfig) (string, error) {
-	switch {
-	case cfg.Transport == "native":
+	switch cfg.Runtime {
+	case "docker":
+		if cfg.Health.Probe == "tcp" && cfg.Port > 0 {
+			if err := ProbeTCP(cfg); err != nil {
+				return "unhealthy", err
+			}
+			return "healthy", nil
+		}
+		if cfg.Port > 0 {
+			if err := ProbeHTTP(name, cfg); err != nil {
+				return "unhealthy", err
+			}
+			return "healthy", nil
+		}
+		return "unknown", nil
+
+	case "process":
+		if cfg.Health.Probe == "tcp" && cfg.Port > 0 {
+			if err := ProbeTCP(cfg); err != nil {
+				return "unhealthy", err
+			}
+			return "healthy", nil
+		}
 		if err := ProbePID(cfg); err != nil {
 			return "unhealthy", err
 		}
 		return "healthy", nil
 
-	case cfg.Transport == "stdio" && cfg.Health.Probe == "tool-list":
-		err := ProbeToolList(name)
-		if err != nil && strings.Contains(err.Error(), "probe not implemented") {
-			return "unknown", nil
+	case "claude":
+		if cfg.Health.Probe == "tool-list" {
+			err := ProbeToolList(name)
+			if err != nil && strings.Contains(err.Error(), "probe not implemented") {
+				return "unknown", nil
+			}
+			if err != nil {
+				return "unhealthy", err
+			}
+			return "healthy", nil
 		}
-		if err != nil {
-			return "unhealthy", err
-		}
-		return "healthy", nil
-
-	case cfg.Health.Probe == "tcp" && cfg.Port > 0:
-		if err := ProbeTCP(cfg); err != nil {
-			return "unhealthy", err
-		}
-		return "healthy", nil
-
-	case cfg.Port > 0:
-		if err := ProbeHTTP(name, cfg); err != nil {
-			return "unhealthy", err
-		}
-		return "healthy", nil
+		return "unknown", nil
 
 	default:
 		return "unknown", nil

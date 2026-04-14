@@ -1,4 +1,5 @@
-transport: native
+protocol: stdio
+runtime: process
 port: 9894
 endpoint_path: /mcp
 pid_file: /tmp/.mcp-airflow.pid

@@ -11,7 +11,8 @@ defaults:
   model: sonnet
   budget_usd: 2.00
   max_turns: 100
-  claude_cmd: claude-work
+  claude_cmd: claude
+  profile: work
   terse: true
 
 max_parallel: 1

@@ -1,4 +1,5 @@
-transport: native
+protocol: stdio
+runtime: process
 pid_file: /tmp/.mcp-graph-mcp.pid
 native_cmd: "/Users/paulie/.local/share/uv/tools/graph-roadmap/bin/python"
 native_args:

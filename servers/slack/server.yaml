@@ -1,5 +1,6 @@
 image: zencoderai/slack-mcp:latest
-transport: http
+protocol: http
+runtime: docker
 port: 9895
 container_port: 9000
 endpoint_path: /mcp

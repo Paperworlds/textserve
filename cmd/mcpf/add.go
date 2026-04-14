@@ -15,15 +15,17 @@ import (
 
 // addTemplateData holds values interpolated into the server scaffold templates.
 type addTemplateData struct {
-	Name      string
-	Image     string
-	Transport string
-	Port      int
-	TagsCSV   string
+	Name     string
+	Image    string
+	Protocol string
+	Runtime  string
+	Port     int
+	TagsCSV  string
 }
 
 const serverYAMLTmpl = `image: "{{.Image}}"
-transport: {{.Transport}}
+protocol: {{.Protocol}}
+runtime: {{.Runtime}}
 port: {{.Port}}
 container_port: {{.Port}}
 endpoint_path: /mcp
@@ -47,9 +49,10 @@ const readmeTmpl = `# {{.Name}}
 
 <!-- TODO: describe what this server does and what tools it exposes -->
 
-## Transport
+## Protocol / Runtime
 
-- **Transport:** {{.Transport}}
+- **Protocol:** {{.Protocol}}
+- **Runtime:** {{.Runtime}}
 - **Port:** {{.Port}}
 - **Endpoint:** http://localhost:{{.Port}}/mcp
 
@@ -111,16 +114,22 @@ func newAddCmd() *cobra.Command {
 					}
 				}
 			}
-			if transport == "http" && !containsTag(tags, "docker") {
+			protocol := transport
+			runtime := "docker"
+			if transport != "http" {
+				runtime = transport
+			}
+			if protocol == "http" && !containsTag(tags, "docker") {
 				tags = append(tags, "docker")
 			}
 
 			data := addTemplateData{
-				Name:      name,
-				Image:     image,
-				Transport: transport,
-				Port:      port,
-				TagsCSV:   strings.Join(tags, ", "),
+				Name:     name,
+				Image:    image,
+				Protocol: protocol,
+				Runtime:  runtime,
+				Port:     port,
+				TagsCSV:  strings.Join(tags, ", "),
 			}
 
 			// Create servers/<name>/ directory.
@@ -148,7 +157,7 @@ func newAddCmd() *cobra.Command {
 			}
 
 			// Append to registry.yaml.
-			if err := appendToRegistry(repoRoot, name, transport, port, image, tags); err != nil {
+			if err := appendToRegistry(repoRoot, name, protocol, port, image, tags); err != nil {
 				return fmt.Errorf("update registry.yaml: %w", err)
 			}
 
@@ -159,7 +168,7 @@ func newAddCmd() *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), "\nNext steps:\n")
 			fmt.Fprintf(cmd.OutOrStdout(), "  1. Edit servers/%s/server.yaml\n", name)
 			fmt.Fprintf(cmd.OutOrStdout(), "  2. mcpf start %s\n", name)
-			fmt.Fprintf(cmd.OutOrStdout(), "  3. claude mcp add --transport %s %s http://localhost:%d/mcp\n", transport, name, port)
+			fmt.Fprintf(cmd.OutOrStdout(), "  3. claude mcp add --transport %s %s http://localhost:%d/mcp\n", protocol, name, port)
 			return nil
 		},
 	}
@@ -209,7 +218,7 @@ func containsTag(tags []string, tag string) bool {
 }
 
 // appendToRegistry adds a new entry to registry.yaml.
-func appendToRegistry(repoRoot, name, transport string, port int, image string, tags []string) error {
+func appendToRegistry(repoRoot, name, protocol string, port int, image string, tags []string) error {
 	regPath := filepath.Join(repoRoot, "registry.yaml")
 	data, err := os.ReadFile(regPath)
 	if err != nil {
@@ -238,8 +247,12 @@ func appendToRegistry(repoRoot, name, transport string, port int, image string, 
 	if image != "" {
 		imageLine = fmt.Sprintf("\n    image: \"%s\"", image)
 	}
-	entry := fmt.Sprintf("\n  %s:%s\n    transport: %s%s\n    tags: %s\n    deps: []\n    health:\n      endpoint: /health\n      timeout: 5\n",
-		name, imageLine, transport, portLine, tagsYAML)
+	runtime := "docker"
+	if protocol != "http" {
+		runtime = protocol
+	}
+	entry := fmt.Sprintf("\n  %s:%s\n    protocol: %s\n    runtime: %s%s\n    tags: %s\n    deps: []\n    health:\n      endpoint: /health\n      timeout: 5\n",
+		name, imageLine, protocol, runtime, portLine, tagsYAML)
 
 	return os.WriteFile(regPath, append(data, []byte(entry)...), 0o644)
 }

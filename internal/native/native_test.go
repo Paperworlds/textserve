@@ -25,7 +25,8 @@ func TestStart_VenvPythonResolution(t *testing.T) {
 	}
 
 	cfg := &registry.ServerConfig{
-		Transport:  "native",
+		Protocol:   "stdio",
+		Runtime:    "process",
 		NativeCmd:  "python",
 		NativeVenv: tmp,
 		NativeArgs: []string{"-c", "pass"},

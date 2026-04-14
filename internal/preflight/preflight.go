@@ -62,14 +62,14 @@ func Run(tags []string, repoRoot string) (*Report, error) {
 		if scErr != nil {
 			sc = &registry.ServerConfig{
 				Image:         entry.Image,
-				Transport:     entry.Transport,
+				Protocol:      entry.Protocol,
+				Runtime:       entry.Runtime,
 				Port:          entry.Port,
 				ContainerPort: entry.ContainerPort,
 				EndpointPath:  entry.EndpointPath,
 				Tags:          entry.Tags,
 				Deps:          entry.Deps,
 				Health:        entry.Health,
-				ManagedBy:     entry.ManagedBy,
 			}
 		}
 
@@ -100,8 +100,8 @@ func Run(tags []string, repoRoot string) (*Report, error) {
 
 // checkServer runs dep checks and a health probe for a single server.
 func checkServer(name string, sc *registry.ServerConfig) ServerResult {
-	// Managed-by-claude stdio servers: probe via tool-list only, no deps.
-	if sc.Transport == "stdio" && sc.ManagedBy == "claude" {
+	// Claude-managed servers: probe via tool-list only, no deps.
+	if sc.Runtime == "claude" {
 		status, err := health.Probe(name, sc)
 		if err != nil {
 			return ServerResult{Status: "unhealthy", Error: err.Error()}

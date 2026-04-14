@@ -1,5 +1,6 @@
 image: mcp-paradex-db
-transport: http
+protocol: http
+runtime: docker
 port: 9898
 container_port: 9000
 endpoint_path: /sse

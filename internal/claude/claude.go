@@ -54,12 +54,15 @@ func (c *claudeConfig) save() error {
 type mcpEntry struct {
 	Type    string            `json:"type"`
 	URL     string            `json:"url,omitempty"`
+	Command string            `json:"command,omitempty"`
+	Args    []string          `json:"args,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"`
 }
 
 // Deregister removes the server from the user-scoped Claude MCP config.
 func Deregister(name string, cfg *registry.ServerConfig) error {
-	if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
+	if cfg.Runtime == "claude" {
 		return nil
 	}
 	c, err := loadConfig()
@@ -73,7 +76,7 @@ func Deregister(name string, cfg *registry.ServerConfig) error {
 // Register adds the server to the user-scoped Claude MCP config.
 // Writes directly to ~/.claude-work/.claude.json — no shelling out to `claude` CLI.
 func Register(name string, cfg *registry.ServerConfig) error {
-	if cfg.Transport == "stdio" && cfg.ManagedBy == "claude" {
+	if cfg.Runtime == "claude" {
 		fmt.Printf("%s is managed by Claude — no action needed\n", name)
 		return nil
 	}
@@ -83,20 +86,51 @@ func Register(name string, cfg *registry.ServerConfig) error {
 		return err
 	}
 
-	entry := mcpEntry{
-		Type: "http",
-		URL:  fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath),
-	}
+	var entry mcpEntry
 
-	// Parse "Key: Value" header strings into a map.
-	if len(cfg.Headers) > 0 {
-		entry.Headers = make(map[string]string, len(cfg.Headers))
-		for _, h := range cfg.Headers {
-			parts := strings.SplitN(h, ": ", 2)
-			if len(parts) == 2 {
-				entry.Headers[parts[0]] = parts[1]
+	if cfg.Protocol == "stdio" {
+		// stdio registration: resolve command via venv if configured.
+		cmd := cfg.NativeCmd
+		if cfg.NativeVenv != "" {
+			venv := os.ExpandEnv(cfg.NativeVenv)
+			candidate := filepath.Join(venv, "bin", cfg.NativeCmd)
+			if _, err := os.Stat(candidate); err == nil {
+				cmd = candidate
 			}
 		}
+		args := make([]string, len(cfg.NativeArgs))
+		for i, a := range cfg.NativeArgs {
+			args[i] = os.ExpandEnv(a)
+		}
+		// Include only static env vars (Value field only; op/template require resolution).
+		var env map[string]string
+		for _, e := range cfg.Env {
+			if e.Value != "" && e.Op == "" && e.ValueTemplate == "" {
+				if env == nil {
+					env = make(map[string]string)
+				}
+				env[e.Name] = e.Value
+			}
+		}
+		entry = mcpEntry{Type: "stdio", Command: cmd, Args: args, Env: env}
+		fmt.Printf("registered %s → stdio:%s (user config)\n", name, cmd)
+	} else {
+		// HTTP registration.
+		entry = mcpEntry{
+			Type: "http",
+			URL:  fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath),
+		}
+		// Parse "Key: Value" header strings into a map.
+		if len(cfg.Headers) > 0 {
+			entry.Headers = make(map[string]string, len(cfg.Headers))
+			for _, h := range cfg.Headers {
+				parts := strings.SplitN(h, ": ", 2)
+				if len(parts) == 2 {
+					entry.Headers[parts[0]] = parts[1]
+				}
+			}
+		}
+		fmt.Printf("registered %s → %s (user config)\n", name, entry.URL)
 	}
 
 	// Convert struct to map[string]any for JSON merge.
@@ -105,18 +139,25 @@ func Register(name string, cfg *registry.ServerConfig) error {
 	json.Unmarshal(entryJSON, &entryMap) //nolint:errcheck
 	c.mcpServers[name] = entryMap
 
-	if err := c.save(); err != nil {
-		return err
+	return c.save()
+}
+
+// IsRegistered returns true if the named server exists in the user-scoped
+// Claude MCP config (~/.claude-work/.claude.json → mcpServers).
+func IsRegistered(name string) bool {
+	c, err := loadConfig()
+	if err != nil {
+		return false
 	}
-	fmt.Printf("registered %s → %s (user config)\n", name, entry.URL)
-	return nil
+	_, ok := c.mcpServers[name]
+	return ok
 }
 
 // registerArgs builds the `claude mcp add` argument list for an HTTP server.
 // Kept for tests — no longer used in production.
 func registerArgs(name string, cfg *registry.ServerConfig) []string {
 	url := fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath)
-	args := []string{"mcp", "add", "--transport", "http", "--scope", "user"}
+	args := []string{"mcp", "add", "--transport", cfg.Protocol, "--scope", "user"}
 	for _, h := range cfg.Headers {
 		args = append(args, "--header", h)
 	}

@@ -1,5 +1,5 @@
-transport: stdio
-managed_by: claude
+protocol: stdio
+runtime: claude
 tags:
   - monitoring
   - stdio

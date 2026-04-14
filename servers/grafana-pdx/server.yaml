@@ -1,5 +1,6 @@
 image: mcp/grafana
-transport: http
+protocol: http
+runtime: docker
 port: 9892
 container_port: 8000
 endpoint_path: /mcp

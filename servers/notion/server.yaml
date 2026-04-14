@@ -1,5 +1,6 @@
 image: mcp-notion
-transport: http
+protocol: http
+runtime: docker
 port: 9888
 container_port: 3000
 endpoint_path: /mcp
