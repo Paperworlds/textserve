@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pdonorio/mcp-fleet/internal/localconfig"
+	"github.com/pdonorio/mcp-fleet/internal/op"
 	"github.com/pdonorio/mcp-fleet/internal/registry"
 )
 
@@ -75,12 +77,9 @@ func Deregister(name string, cfg *registry.ServerConfig) error {
 
 // Register adds the server to the user-scoped Claude MCP config.
 // Writes directly to ~/.claude-work/.claude.json — no shelling out to `claude` CLI.
+// For runtime=claude stdio servers, op secrets are resolved at register time so
+// Claude Code can inject them when it starts the subprocess.
 func Register(name string, cfg *registry.ServerConfig) error {
-	if cfg.Runtime == "claude" {
-		fmt.Printf("%s is managed by Claude — no action needed\n", name)
-		return nil
-	}
-
 	c, err := loadConfig()
 	if err != nil {
 		return err
@@ -102,14 +101,34 @@ func Register(name string, cfg *registry.ServerConfig) error {
 		for i, a := range cfg.NativeArgs {
 			args[i] = os.ExpandEnv(a)
 		}
-		// Include only static env vars (Value field only; op/template require resolution).
+		// Resolve env vars: local config overrides take priority, then server.yaml
+		// static values. op:// references are resolved via `op read`.
+		localCfg, _ := localconfig.Load()
+		localEnv := localCfg.EnvFor(name)
 		var env map[string]string
 		for _, e := range cfg.Env {
-			if e.Value != "" && e.Op == "" && e.ValueTemplate == "" {
+			ref := localEnv[e.Name] // local config override (op path or plain value)
+			if ref == "" {
+				ref = e.Op // fall back to server.yaml op field (discouraged for personal paths)
+			}
+			var val string
+			switch {
+			case ref != "" && strings.HasPrefix(ref, "op://"):
+				if v, err := op.Read(ref); err == nil {
+					val = v
+				} else {
+					fmt.Printf("warning: %v\n", err)
+				}
+			case ref != "":
+				val = os.ExpandEnv(ref)
+			case e.Value != "":
+				val = os.ExpandEnv(e.Value)
+			}
+			if val != "" {
 				if env == nil {
 					env = make(map[string]string)
 				}
-				env[e.Name] = e.Value
+				env[e.Name] = val
 			}
 		}
 		entry = mcpEntry{Type: "stdio", Command: cmd, Args: args, Env: env}

@@ -1,5 +1,14 @@
 protocol: stdio
 runtime: claude
+native_cmd: npx
+native_args:
+  - "@sentry/mcp-server@latest"
+  - "--transport"
+  - "stdio"
+env:
+  - name: SENTRY_AUTH_TOKEN
+    # op path configured in ~/.config/textserve/config.yaml (not committed)
+    cache: 1h
 tags:
   - monitoring
   - stdio

@@ -55,6 +55,7 @@ func buildRoot() *cobra.Command {
 		newStartCmd(),
 		newStopCmd(),
 		newRestartCmd(),
+		newRegisterCmd(),
 		newDeregisterCmd(),
 		newLogsCmd(),
 		newListCmd(),
@@ -427,6 +428,44 @@ func newDeregisterCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&tag, "tag", "", "deregister all servers with this tag")
 	cmd.Flags().BoolVar(&all, "all", false, "deregister all servers (clean context)")
+	return cmd
+}
+
+func newRegisterCmd() *cobra.Command {
+	var tag string
+	var all bool
+	cmd := &cobra.Command{
+		Use:   "register [name]",
+		Short: "Register MCP server(s) in Claude without starting them",
+		Long:  "Writes MCP server entries to claude.json so they appear in /mcp. For stdio servers (runtime=claude), resolves 1Password secrets at registration time.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fleet, repoRoot, err := loadFleet()
+			if err != nil {
+				return err
+			}
+			name := ""
+			if len(args) > 0 {
+				name = args[0]
+			}
+			names, err := resolveNames(fleet, name, tag, all)
+			if err != nil {
+				return err
+			}
+			for _, n := range names {
+				entry := fleet.Servers[n]
+				cfg := serverConfig(repoRoot, n, entry)
+				resolvePreStart(repoRoot, cfg)
+				if err := claude.Register(n, cfg); err != nil {
+					fmt.Fprintf(os.Stderr, "register %s: %v\n", n, err)
+					continue
+				}
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&tag, "tag", "", "register all servers with this tag")
+	cmd.Flags().BoolVar(&all, "all", false, "register all servers")
 	return cmd
 }
 
