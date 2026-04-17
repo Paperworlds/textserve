@@ -54,12 +54,13 @@ func (c *claudeConfig) save() error {
 
 // mcpEntry builds the JSON entry for a server.
 type mcpEntry struct {
-	Type    string            `json:"type"`
-	URL     string            `json:"url,omitempty"`
-	Command string            `json:"command,omitempty"`
-	Args    []string          `json:"args,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	Headers map[string]string `json:"headers,omitempty"`
+	Type          string            `json:"type"`
+	URL           string            `json:"url,omitempty"`
+	Command       string            `json:"command,omitempty"`
+	Args          []string          `json:"args,omitempty"`
+	Env           map[string]string `json:"env,omitempty"`
+	Headers       map[string]string `json:"headers,omitempty"`
+	DisabledTools []string          `json:"disabledTools,omitempty"`
 }
 
 // Deregister removes the server from the user-scoped Claude MCP config.
@@ -131,13 +132,14 @@ func Register(name string, cfg *registry.ServerConfig) error {
 				env[e.Name] = val
 			}
 		}
-		entry = mcpEntry{Type: "stdio", Command: cmd, Args: args, Env: env}
+		entry = mcpEntry{Type: "stdio", Command: cmd, Args: args, Env: env, DisabledTools: cfg.DisabledTools}
 		fmt.Printf("registered %s → stdio:%s (user config)\n", name, cmd)
 	} else {
 		// HTTP registration.
 		entry = mcpEntry{
-			Type: "http",
-			URL:  fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath),
+			Type:          "http",
+			URL:           fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.EndpointPath),
+			DisabledTools: cfg.DisabledTools,
 		}
 		// Parse "Key: Value" header strings into a map.
 		if len(cfg.Headers) > 0 {

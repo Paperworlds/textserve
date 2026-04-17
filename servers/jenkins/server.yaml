@@ -28,3 +28,12 @@ extra_args:
 health:
   endpoint: /health
   timeout: 5
+# Node management and config-write ops rarely used
+disabled_tools:
+  - get_all_nodes
+  - get_node
+  - get_node_config
+  - set_item_config
+  - set_node_config
+  - get_build_scripts
+  - cancel_queue_item

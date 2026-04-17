@@ -13,3 +13,12 @@ tags:
 health:
   probe: tool-list
   timeout: 5
+# Project admin tools rarely needed day-to-day
+disabled_tools:
+  - create_dsn
+  - create_project
+  - create_team
+  - update_project
+  - get_event_attachment
+  - get_profile_details
+  - get_replay_details

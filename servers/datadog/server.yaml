@@ -25,3 +25,14 @@ env:
 health:
   endpoint: /health
   timeout: 5
+# Low-value tools for daily use — admin/billing/infra-mgmt ops
+disabled_tools:
+  - auth
+  - downtimes
+  - hosts
+  - notebooks
+  - rum
+  - schema
+  - tags
+  - usage
+  - users

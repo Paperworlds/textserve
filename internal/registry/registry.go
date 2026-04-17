@@ -61,6 +61,7 @@ type ServerConfig struct {
 	Deps          []Dep    `yaml:"deps,omitempty"`
 	Health        Health   `yaml:"health,omitempty"`
 	Headers       []string `yaml:"headers,omitempty"`
+	DisabledTools []string `yaml:"disabled_tools,omitempty"`
 }
 
 // RegistryEntry is a single entry in registry.yaml.
