@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/paperworlds/textserve/internal/health"
 	"github.com/paperworlds/textserve/internal/preflight"
 )
 
@@ -76,11 +77,11 @@ func printPreflightReport(cmd *cobra.Command, report *preflight.Report) {
 
 func statusIcon(status string) string {
 	switch status {
-	case "healthy":
+	case health.StatusHealthy:
 		return "✓"
-	case "unhealthy":
+	case health.StatusUnhealthy:
 		return "✗"
-	case "stopped":
+	case health.StatusStopped:
 		return "○"
 	default:
 		return "?"

@@ -65,7 +65,7 @@ func Run(tags []string, repoRoot string) (*Report, error) {
 
 		result := checkServer(name, sc)
 		results[name] = result
-		if result.Status == "unhealthy" {
+		if result.Status == health.StatusUnhealthy {
 			blocking = append(blocking, name)
 		}
 	}
@@ -76,8 +76,8 @@ func Run(tags []string, repoRoot string) (*Report, error) {
 	sort.Strings(blocking)
 
 	ready := len(blocking) == 0
-	// "stopped" servers do not block readiness for the purpose of this report.
-	// Only "unhealthy" counts as blocking.
+	// health.StatusStopped servers do not block readiness for the purpose of this report.
+	// Only health.StatusUnhealthy counts as blocking.
 
 	return &Report{
 		Timestamp:     time.Now().UTC().Truncate(time.Second),
@@ -94,10 +94,10 @@ func checkServer(name string, sc *registry.ServerConfig) ServerResult {
 	if sc.Runtime == "claude" {
 		status, err := health.Probe(name, sc)
 		if err != nil {
-			return ServerResult{Status: "unhealthy", Error: err.Error()}
+			return ServerResult{Status: health.StatusUnhealthy, Error: err.Error()}
 		}
-		if status == "unknown" {
-			return ServerResult{Status: "stopped"}
+		if status == health.StatusUnknown {
+			return ServerResult{Status: health.StatusStopped}
 		}
 		return ServerResult{Status: status}
 	}
@@ -105,7 +105,7 @@ func checkServer(name string, sc *registry.ServerConfig) ServerResult {
 	// Dep checks.
 	if err := deps.Check(sc.Deps); err != nil {
 		return ServerResult{
-			Status: "unhealthy",
+			Status: health.StatusUnhealthy,
 			Port:   sc.Port,
 			Error:  fmt.Sprintf("dep_failed: %s", err.Error()),
 		}
@@ -114,13 +114,13 @@ func checkServer(name string, sc *registry.ServerConfig) ServerResult {
 	// Health probe.
 	status, err := health.Probe(name, sc)
 	if err != nil {
-		return ServerResult{Status: "unhealthy", Port: sc.Port, Error: err.Error()}
+		return ServerResult{Status: health.StatusUnhealthy, Port: sc.Port, Error: err.Error()}
 	}
 	switch status {
-	case "healthy":
-		return ServerResult{Status: "healthy", Port: sc.Port}
-	case "unknown":
-		return ServerResult{Status: "stopped"}
+	case health.StatusHealthy:
+		return ServerResult{Status: health.StatusHealthy, Port: sc.Port}
+	case health.StatusUnknown:
+		return ServerResult{Status: health.StatusStopped}
 	default:
 		return ServerResult{Status: status, Port: sc.Port}
 	}

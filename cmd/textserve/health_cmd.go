@@ -37,9 +37,9 @@ func newHealthCmd() *cobra.Command {
 				cfg := serverConfig(repoRoot, n, entry)
 				status, probeErr := health.Probe(n, cfg)
 				switch status {
-				case "healthy":
+				case health.StatusHealthy:
 					fmt.Fprintf(out, "✓ %-20s healthy\n", n)
-				case "unhealthy":
+				case health.StatusUnhealthy:
 					anyUnhealthy = true
 					fmt.Fprintf(out, "✗ %-20s unhealthy: %v\n", n, probeErr)
 				default:

@@ -14,6 +14,14 @@ import (
 	"github.com/paperworlds/textserve/internal/registry"
 )
 
+// Server status values returned by Probe and used by callers across the stack.
+const (
+	StatusHealthy   = "healthy"
+	StatusUnhealthy = "unhealthy"
+	StatusUnknown   = "unknown"
+	StatusStopped   = "stopped"
+)
+
 // ProbeHTTP checks that the HTTP health endpoint returns a 2xx status code.
 func ProbeHTTP(name string, cfg *registry.ServerConfig) error {
 	endpoint := cfg.Health.Endpoint
@@ -96,44 +104,44 @@ func Probe(name string, cfg *registry.ServerConfig) (string, error) {
 	case "docker":
 		if cfg.Health.Probe == "tcp" && cfg.Port > 0 {
 			if err := ProbeTCP(cfg); err != nil {
-				return "unhealthy", err
+				return StatusUnhealthy, err
 			}
-			return "healthy", nil
+			return StatusHealthy, nil
 		}
 		if cfg.Port > 0 {
 			if err := ProbeHTTP(name, cfg); err != nil {
-				return "unhealthy", err
+				return StatusUnhealthy, err
 			}
-			return "healthy", nil
+			return StatusHealthy, nil
 		}
-		return "unknown", nil
+		return StatusUnknown, nil
 
 	case "process":
 		if cfg.Health.Probe == "tcp" && cfg.Port > 0 {
 			if err := ProbeTCP(cfg); err != nil {
-				return "unhealthy", err
+				return StatusUnhealthy, err
 			}
-			return "healthy", nil
+			return StatusHealthy, nil
 		}
 		if err := ProbePID(cfg); err != nil {
-			return "unhealthy", err
+			return StatusUnhealthy, err
 		}
-		return "healthy", nil
+		return StatusHealthy, nil
 
 	case "claude":
 		if cfg.Health.Probe == "tool-list" {
 			err := ProbeToolList(name)
 			if err != nil && strings.Contains(err.Error(), "probe not implemented") {
-				return "unknown", nil
+				return StatusUnknown, nil
 			}
 			if err != nil {
-				return "unhealthy", err
+				return StatusUnhealthy, err
 			}
-			return "healthy", nil
+			return StatusHealthy, nil
 		}
-		return "unknown", nil
+		return StatusUnknown, nil
 
 	default:
-		return "unknown", nil
+		return StatusUnknown, nil
 	}
 }

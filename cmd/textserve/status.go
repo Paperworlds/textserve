@@ -70,7 +70,7 @@ func newStatusCmd() *cobra.Command {
 
 					status, _ := ProbeFunc(name, cfg)
 					if status == "" {
-						status = "unknown"
+						status = health.StatusUnknown
 					}
 
 					portStr := "-"
@@ -122,9 +122,9 @@ func buildSummary(rows []serverRow) StatusSummary {
 	var unhealthy []string
 	healthyCount := 0
 	for _, r := range rows {
-		if r.status == "healthy" {
+		if r.status == health.StatusHealthy {
 			healthyCount++
-		} else if r.status == "unhealthy" {
+		} else if r.status == health.StatusUnhealthy {
 			unhealthy = append(unhealthy, r.name)
 		}
 	}
@@ -168,11 +168,11 @@ func printStatusTable(cmd *cobra.Command, rows []serverRow) {
 
 func formatStatus(status, runtime string) string {
 	switch {
-	case status == "healthy":
+	case status == health.StatusHealthy:
 		return fmt.Sprintf("%s● running%s ", colorGreen, colorReset)
 	case runtime == "claude":
 		return fmt.Sprintf("%s◆ claude%s  ", colorCyan, colorReset)
-	case status == "unhealthy":
+	case status == health.StatusUnhealthy:
 		return fmt.Sprintf("○ stopped  ")
 	default:
 		return fmt.Sprintf("○ unknown  ")
