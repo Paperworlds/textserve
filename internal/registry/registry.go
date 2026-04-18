@@ -119,14 +119,20 @@ func (r *FleetRegistry) ListNames() []string {
 	return names
 }
 
-// FilterByTag returns server names that include the given tag.
-func (r *FleetRegistry) AllNames() []string {
-	names := make([]string, 0, len(r.Servers))
-	for name := range r.Servers {
-		names = append(names, name)
+// ServerConfigFromEntry builds a ServerConfig from a registry entry.
+// Used as a fallback when servers/<name>/server.yaml is not found.
+func ServerConfigFromEntry(entry RegistryEntry) *ServerConfig {
+	return &ServerConfig{
+		Image:         entry.Image,
+		Protocol:      entry.Protocol,
+		Runtime:       entry.Runtime,
+		Port:          entry.Port,
+		ContainerPort: entry.ContainerPort,
+		EndpointPath:  entry.EndpointPath,
+		Tags:          entry.Tags,
+		Deps:          entry.Deps,
+		Health:        entry.Health,
 	}
-	sort.Strings(names)
-	return names
 }
 
 func (r *FleetRegistry) FilterByTag(tag string) []string {

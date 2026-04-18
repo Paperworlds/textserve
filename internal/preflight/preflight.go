@@ -60,17 +60,7 @@ func Run(tags []string, repoRoot string) (*Report, error) {
 		entry := fleet.Servers[name]
 		sc, scErr := registry.LoadServer(repoRoot, name)
 		if scErr != nil {
-			sc = &registry.ServerConfig{
-				Image:         entry.Image,
-				Protocol:      entry.Protocol,
-				Runtime:       entry.Runtime,
-				Port:          entry.Port,
-				ContainerPort: entry.ContainerPort,
-				EndpointPath:  entry.EndpointPath,
-				Tags:          entry.Tags,
-				Deps:          entry.Deps,
-				Health:        entry.Health,
-			}
+			sc = registry.ServerConfigFromEntry(entry)
 		}
 
 		result := checkServer(name, sc)

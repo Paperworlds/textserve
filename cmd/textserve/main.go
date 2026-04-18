@@ -145,7 +145,7 @@ func loadFleet() (*registry.FleetRegistry, string, error) {
 
 func resolveNames(fleet *registry.FleetRegistry, name, tag string, all bool) ([]string, error) {
 	if all {
-		return fleet.AllNames(), nil
+		return fleet.ListNames(), nil
 	}
 	if name != "" {
 		if _, ok := fleet.Servers[name]; !ok {
@@ -167,17 +167,7 @@ func resolveNames(fleet *registry.FleetRegistry, name, tag string, all bool) ([]
 func serverConfig(repoRoot, name string, entry registry.RegistryEntry) *registry.ServerConfig {
 	sc, err := registry.LoadServer(repoRoot, name)
 	if err != nil {
-		return &registry.ServerConfig{
-			Image:         entry.Image,
-			Protocol:      entry.Protocol,
-			Runtime:       entry.Runtime,
-			Port:          entry.Port,
-			ContainerPort: entry.ContainerPort,
-			EndpointPath:  entry.EndpointPath,
-			Tags:          entry.Tags,
-			Deps:          entry.Deps,
-			Health:        entry.Health,
-		}
+		return registry.ServerConfigFromEntry(entry)
 	}
 	return sc
 }

@@ -55,18 +55,7 @@ func runDoctor(out io.Writer) error {
 		sc, scErr := registry.LoadServer(root, n)
 		if scErr != nil {
 			// Fall back to registry entry so we can still run other checks.
-			entry := fleet.Servers[n]
-			sc = &registry.ServerConfig{
-				Image:         entry.Image,
-				Protocol:      entry.Protocol,
-				Runtime:       entry.Runtime,
-				Port:          entry.Port,
-				ContainerPort: entry.ContainerPort,
-				EndpointPath:  entry.EndpointPath,
-				Tags:          entry.Tags,
-				Deps:          entry.Deps,
-				Health:        entry.Health,
-			}
+			sc = registry.ServerConfigFromEntry(fleet.Servers[n])
 			badConfigs = append(badConfigs, n)
 		}
 		configs[n] = sc
