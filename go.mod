@@ -1,4 +1,4 @@
-module github.com/pdonorio/mcp-fleet
+module github.com/paperworlds/textserve
 
 go 1.26.2
 

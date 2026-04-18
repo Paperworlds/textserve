@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // Check runs each dep's cmd via bash and returns an error if any fail.

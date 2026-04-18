@@ -8,11 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/pdonorio/mcp-fleet/internal/claude"
-	"github.com/pdonorio/mcp-fleet/internal/deps"
-	"github.com/pdonorio/mcp-fleet/internal/docker"
-	"github.com/pdonorio/mcp-fleet/internal/native"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/claude"
+	"github.com/paperworlds/textserve/internal/deps"
+	"github.com/paperworlds/textserve/internal/docker"
+	"github.com/paperworlds/textserve/internal/native"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // version is set at build time via -ldflags, falls back to VERSION file.
@@ -43,7 +43,7 @@ func main() {
 
 func buildRoot() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "mcpf",
+		Use:   "textserve",
 		Short: "mcp-fleet management CLI",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
@@ -68,16 +68,16 @@ func buildRoot() *cobra.Command {
 	return root
 }
 
-// configFilePath returns the path to the mcpf config file.
+// configFilePath returns the path to the textserve config file.
 func configFilePath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".local", "mcpf", "config.yaml"), nil
+	return filepath.Join(home, ".config", "paperworlds", "textserve", "config.yaml"), nil
 }
 
-// readConfigRoot reads the root field from ~/.local/mcpf/config.yaml.
+// readConfigRoot reads the root field from ~/.config/paperworlds/textserve/config.yaml.
 // Returns "" if the file does not exist.
 func readConfigRoot() string {
 	cfgPath, err := configFilePath()
@@ -104,7 +104,7 @@ func readConfigRoot() string {
 }
 
 // findRepoRoot walks up from cwd until registry.yaml is found,
-// then falls back to the root set in ~/.local/mcpf/config.yaml.
+// then falls back to the root set in ~/.config/paperworlds/textserve/config.yaml.
 func findRepoRoot() (string, error) {
 	// Walk up from CWD first.
 	dir, err := os.Getwd()

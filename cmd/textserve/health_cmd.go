@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/pdonorio/mcp-fleet/internal/health"
+	"github.com/paperworlds/textserve/internal/health"
 )
 
 func newHealthCmd() *cobra.Command {

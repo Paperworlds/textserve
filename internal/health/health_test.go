@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pdonorio/mcp-fleet/internal/health"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/health"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // serverPort extracts the numeric port from a URL like "http://127.0.0.1:PORT".

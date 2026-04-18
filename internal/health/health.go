@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // ProbeHTTP checks that the HTTP health endpoint returns a 2xx status code.

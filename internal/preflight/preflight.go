@@ -6,9 +6,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pdonorio/mcp-fleet/internal/deps"
-	"github.com/pdonorio/mcp-fleet/internal/health"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/deps"
+	"github.com/paperworlds/textserve/internal/health"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // ServerResult holds the preflight result for a single server.

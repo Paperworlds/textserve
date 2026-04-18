@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // addTemplateData holds values interpolated into the server scaffold templates.
@@ -67,7 +67,7 @@ const readmeTmpl = `# {{.Name}}
 ## Usage
 
 ` + "```" + `bash
-mcpf start {{.Name}}
+textserve start {{.Name}}
 claude mcp add --transport http {{.Name}} http://localhost:{{.Port}}/mcp
 ` + "```" + `
 `
@@ -167,7 +167,7 @@ func newAddCmd() *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), "  README.md    — fill in auth and tool docs\n")
 			fmt.Fprintf(cmd.OutOrStdout(), "\nNext steps:\n")
 			fmt.Fprintf(cmd.OutOrStdout(), "  1. Edit servers/%s/server.yaml\n", name)
-			fmt.Fprintf(cmd.OutOrStdout(), "  2. mcpf start %s\n", name)
+			fmt.Fprintf(cmd.OutOrStdout(), "  2. textserve start %s\n", name)
 			fmt.Fprintf(cmd.OutOrStdout(), "  3. claude mcp add --transport %s %s http://localhost:%d/mcp\n", protocol, name, port)
 			return nil
 		},

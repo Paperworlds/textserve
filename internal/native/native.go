@@ -9,8 +9,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pdonorio/mcp-fleet/internal/docker"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/docker"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // Start launches the native server in the background and writes its PID to cfg.PidFile.

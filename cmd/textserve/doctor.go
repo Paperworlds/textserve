@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 func newDoctorCmd() *cobra.Command {
@@ -156,7 +156,7 @@ func runDoctor(out io.Writer) error {
 			if allCached {
 				pass(fmt.Sprintf("%s credentials cached", n))
 			} else {
-				miss(fmt.Sprintf("%s credentials not cached (%s) (run: mcpf start %s)", n, strings.Join(missing, ", "), n))
+				miss(fmt.Sprintf("%s credentials not cached (%s) (run: textserve start %s)", n, strings.Join(missing, ", "), n))
 			}
 		}
 	}

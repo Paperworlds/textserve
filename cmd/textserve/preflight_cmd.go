@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/pdonorio/mcp-fleet/internal/preflight"
+	"github.com/paperworlds/textserve/internal/preflight"
 )
 
 func newPreflightCmd() *cobra.Command {

@@ -3,8 +3,8 @@ package deps_test
 import (
 	"testing"
 
-	"github.com/pdonorio/mcp-fleet/internal/deps"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/deps"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 func TestCheck_Passing(t *testing.T) {

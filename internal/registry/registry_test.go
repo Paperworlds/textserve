@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // repoRoot returns the absolute path to the repository root, derived from the

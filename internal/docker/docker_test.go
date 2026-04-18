@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pdonorio/mcp-fleet/internal/docker"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/docker"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 func TestResolveEnv_StaticValue(t *testing.T) {

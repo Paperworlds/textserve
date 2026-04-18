@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pdonorio/mcp-fleet/internal/localconfig"
-	"github.com/pdonorio/mcp-fleet/internal/op"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/localconfig"
+	"github.com/paperworlds/textserve/internal/op"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // configPath returns the absolute path to the user-scoped Claude config.

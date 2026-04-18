@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pdonorio/mcp-fleet/internal/op"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	"github.com/paperworlds/textserve/internal/op"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // ResolveEnv processes cfg.Env in order and returns "NAME=VALUE" strings.

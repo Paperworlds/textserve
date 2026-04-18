@@ -14,9 +14,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	mcpClaude "github.com/pdonorio/mcp-fleet/internal/claude"
-	"github.com/pdonorio/mcp-fleet/internal/health"
-	"github.com/pdonorio/mcp-fleet/internal/registry"
+	mcpClaude "github.com/paperworlds/textserve/internal/claude"
+	"github.com/paperworlds/textserve/internal/health"
+	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // StatusSummary is the JSON structure written to ~/.files/states/mcp-fleet.json.
