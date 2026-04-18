@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/paperworlds/textserve/internal/docker"
+	"github.com/paperworlds/textserve/internal/health"
 	"github.com/paperworlds/textserve/internal/registry"
 )
 
@@ -91,24 +92,24 @@ func Stop(name string, cfg *registry.ServerConfig) error {
 	return os.Remove(cfg.PidFile)
 }
 
-// Status returns "running" or "stopped".
+// Status returns health.StatusRunning or health.StatusStopped.
 func Status(name string, cfg *registry.ServerConfig) (string, error) {
 	if cfg.PidFile == "" {
-		return "stopped", nil
+		return health.StatusStopped, nil
 	}
 	pid, err := readPID(cfg.PidFile)
 	if err != nil {
-		return "stopped", nil
+		return health.StatusStopped, nil
 	}
 	proc, err := os.FindProcess(pid)
 	if err != nil {
-		return "stopped", nil
+		return health.StatusStopped, nil
 	}
 	// Signal 0 checks existence without sending a real signal.
 	if err := proc.Signal(syscall.Signal(0)); err != nil {
-		return "stopped", nil
+		return health.StatusStopped, nil
 	}
-	return "running", nil
+	return health.StatusRunning, nil
 }
 
 func readPID(path string) (int, error) {

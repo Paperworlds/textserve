@@ -20,6 +20,7 @@ const (
 	StatusUnhealthy = "unhealthy"
 	StatusUnknown   = "unknown"
 	StatusStopped   = "stopped"
+	StatusRunning   = "running"
 )
 
 // ProbeHTTP checks that the HTTP health endpoint returns a 2xx status code.

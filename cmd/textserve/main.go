@@ -11,6 +11,7 @@ import (
 	"github.com/paperworlds/textserve/internal/claude"
 	"github.com/paperworlds/textserve/internal/deps"
 	"github.com/paperworlds/textserve/internal/docker"
+	"github.com/paperworlds/textserve/internal/health"
 	"github.com/paperworlds/textserve/internal/native"
 	"github.com/paperworlds/textserve/internal/registry"
 )
@@ -69,32 +70,24 @@ func buildRoot() *cobra.Command {
 }
 
 // configFilePath returns the path to the textserve config file.
-func configFilePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".config", "paperworlds", "textserve", "config.yaml"), nil
+func configFilePath() string {
+	return filepath.Join(os.Getenv("HOME"), ".config", "paperworlds", "textserve", "config.yaml")
 }
 
 // readConfigRoot reads the root field from ~/.config/paperworlds/textserve/config.yaml.
 // Returns "" if the file does not exist.
 func readConfigRoot() string {
-	cfgPath, err := configFilePath()
+	data, err := os.ReadFile(configFilePath())
 	if err != nil {
 		return ""
 	}
-	data, err := os.ReadFile(cfgPath)
-	if err != nil {
-		return ""
-	}
+	home := os.Getenv("HOME")
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "root:") {
 			val := strings.TrimSpace(strings.TrimPrefix(line, "root:"))
 			val = strings.Trim(val, `"'`)
 			if strings.HasPrefix(val, "~/") {
-				home, _ := os.UserHomeDir()
 				val = filepath.Join(home, val[2:])
 			}
 			return val
@@ -127,8 +120,7 @@ func findRepoRoot() (string, error) {
 			return root, nil
 		}
 	}
-	cfgPath, _ := configFilePath()
-	return "", fmt.Errorf("registry.yaml not found (set 'root' in %s or run from repo)", cfgPath)
+	return "", fmt.Errorf("registry.yaml not found (set 'root' in %s or run from repo)", configFilePath())
 }
 
 func loadFleet() (*registry.FleetRegistry, string, error) {
@@ -233,7 +225,7 @@ func newStartCmd() *cobra.Command {
 					switch cfg.Runtime {
 					case registry.RuntimeProcess:
 						// Stop any existing process before starting a new one.
-						if status, _ := native.Status(n, cfg); status == "running" {
+						if status, _ := native.Status(n, cfg); status == health.StatusRunning {
 							_ = native.Stop(n, cfg)
 						}
 						if err := native.Start(n, cfg); err != nil {

@@ -81,7 +81,7 @@ func statusIcon(status string) string {
 		return "✓"
 	case health.StatusUnhealthy:
 		return "✗"
-	case health.StatusStopped:
+	case health.StatusStopped, health.StatusUnknown:
 		return "○"
 	default:
 		return "?"

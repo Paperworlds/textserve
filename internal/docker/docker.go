@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/paperworlds/textserve/internal/health"
 	"github.com/paperworlds/textserve/internal/op"
 	"github.com/paperworlds/textserve/internal/registry"
 )
@@ -140,16 +141,16 @@ func Stop(name string) error {
 	return exec.Command("docker", "rm", "-f", "mcp-"+name).Run()
 }
 
-// Status returns "running", "stopped", or "unknown".
+// Status returns health.StatusRunning, health.StatusStopped, or health.StatusUnknown.
 func Status(name string) (string, error) {
 	out, err := exec.Command("docker", "inspect", "--format", "{{.State.Status}}", "mcp-"+name).Output()
 	if err != nil {
-		return "unknown", nil
+		return health.StatusUnknown, nil
 	}
-	if strings.TrimSpace(string(out)) == "running" {
-		return "running", nil
+	if strings.TrimSpace(string(out)) == health.StatusRunning {
+		return health.StatusRunning, nil
 	}
-	return "stopped", nil
+	return health.StatusStopped, nil
 }
 
 // Logs streams the container log to stdout.
