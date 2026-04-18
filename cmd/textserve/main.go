@@ -163,6 +163,21 @@ func resolveNames(fleet *registry.FleetRegistry, name, tag string, all bool) ([]
 	return nil, fmt.Errorf("specify a server name, --tag, or --all")
 }
 
+// parseTags splits a comma-separated tags flag value into a slice, trimming whitespace.
+func parseTags(flagValue string) []string {
+	if flagValue == "" {
+		return nil
+	}
+	var tags []string
+	for _, t := range strings.Split(flagValue, ",") {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			tags = append(tags, t)
+		}
+	}
+	return tags
+}
+
 // serverConfig loads servers/<name>/server.yaml, falling back to the registry entry.
 func serverConfig(repoRoot, name string, entry registry.RegistryEntry) *registry.ServerConfig {
 	sc, err := registry.LoadServer(repoRoot, name)

@@ -105,15 +105,7 @@ func newAddCmd() *cobra.Command {
 			}
 
 			// Build tags list.
-			var tags []string
-			if tagsFlag != "" {
-				for _, t := range strings.Split(tagsFlag, ",") {
-					t = strings.TrimSpace(t)
-					if t != "" {
-						tags = append(tags, t)
-					}
-				}
-			}
+			tags := parseTags(tagsFlag)
 			protocol := transport
 			runtime := "docker"
 			if transport != "http" {

@@ -25,15 +25,7 @@ func newPreflightCmd() *cobra.Command {
 				return err
 			}
 
-			var tags []string
-			if tagsFlag != "" {
-				for _, t := range strings.Split(tagsFlag, ",") {
-					t = strings.TrimSpace(t)
-					if t != "" {
-						tags = append(tags, t)
-					}
-				}
-			}
+			tags := parseTags(tagsFlag)
 
 			report, err := preflight.Run(tags, repoRoot)
 			if err != nil {
