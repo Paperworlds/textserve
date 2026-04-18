@@ -91,7 +91,7 @@ func Run(tags []string, repoRoot string) (*Report, error) {
 // checkServer runs dep checks and a health probe for a single server.
 func checkServer(name string, sc *registry.ServerConfig) ServerResult {
 	// Claude-managed servers: probe via tool-list only, no deps.
-	if sc.Runtime == "claude" {
+	if sc.Runtime == registry.RuntimeClaude {
 		status, err := health.Probe(name, sc)
 		if err != nil {
 			return ServerResult{Status: health.StatusUnhealthy, Error: err.Error()}

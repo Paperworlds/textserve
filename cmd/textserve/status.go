@@ -170,7 +170,7 @@ func formatStatus(status, runtime string) string {
 	switch {
 	case status == health.StatusHealthy:
 		return fmt.Sprintf("%s● running%s ", colorGreen, colorReset)
-	case runtime == "claude":
+	case runtime == registry.RuntimeClaude:
 		return fmt.Sprintf("%s◆ claude%s  ", colorCyan, colorReset)
 	case status == health.StatusUnhealthy:
 		return fmt.Sprintf("○ stopped  ")
@@ -202,9 +202,9 @@ func writeSummaryFile(s StatusSummary) error {
 // uptimeFor returns a human-readable uptime string for the given server.
 func uptimeFor(name string, cfg *registry.ServerConfig) string {
 	switch cfg.Runtime {
-	case "claude":
+	case registry.RuntimeClaude:
 		return "-"
-	case "process":
+	case registry.RuntimeProcess:
 		return nativeUptime(cfg)
 	default:
 		return dockerUptime(name)
@@ -212,7 +212,7 @@ func uptimeFor(name string, cfg *registry.ServerConfig) string {
 }
 
 func dockerUptime(name string) string {
-	out, err := exec.Command("docker", "inspect",
+	out, err := exec.Command(registry.RuntimeDocker, "inspect",
 		"--format", "{{.State.StartedAt}}",
 		"mcp-"+name).Output()
 	if err != nil {

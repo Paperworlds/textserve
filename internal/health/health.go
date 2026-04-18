@@ -71,7 +71,7 @@ func ProbePID(cfg *registry.ServerConfig) error {
 // ProbeToolList probes an stdio MCP server via claude mcp get-tools.
 // Returns a "probe not implemented" error when the claude CLI is unavailable.
 func ProbeToolList(name string) error {
-	out, err := exec.Command("claude", "mcp", "get-tools", name).Output()
+	out, err := exec.Command(registry.RuntimeClaude, "mcp", "get-tools", name).Output()
 	if err != nil {
 		return fmt.Errorf("probe not implemented: %w", err)
 	}
@@ -101,7 +101,7 @@ func ProbeTCP(cfg *registry.ServerConfig) error {
 // Returns ("healthy", nil), ("unhealthy", err), or ("unknown", nil).
 func Probe(name string, cfg *registry.ServerConfig) (string, error) {
 	switch cfg.Runtime {
-	case "docker":
+	case registry.RuntimeDocker:
 		if cfg.Health.Probe == "tcp" && cfg.Port > 0 {
 			if err := ProbeTCP(cfg); err != nil {
 				return StatusUnhealthy, err
@@ -116,7 +116,7 @@ func Probe(name string, cfg *registry.ServerConfig) (string, error) {
 		}
 		return StatusUnknown, nil
 
-	case "process":
+	case registry.RuntimeProcess:
 		if cfg.Health.Probe == "tcp" && cfg.Port > 0 {
 			if err := ProbeTCP(cfg); err != nil {
 				return StatusUnhealthy, err
@@ -128,7 +128,7 @@ func Probe(name string, cfg *registry.ServerConfig) (string, error) {
 		}
 		return StatusHealthy, nil
 
-	case "claude":
+	case registry.RuntimeClaude:
 		if cfg.Health.Probe == "tool-list" {
 			err := ProbeToolList(name)
 			if err != nil && strings.Contains(err.Error(), "probe not implemented") {

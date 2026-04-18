@@ -88,10 +88,10 @@ func runDoctor(out io.Writer) error {
 	// 4. Image availability (docker servers only — warns, does not fail)
 	for _, n := range names {
 		sc := configs[n]
-		if sc.Image == "" || sc.Runtime == "process" || sc.Runtime == "claude" {
+		if sc.Image == "" || sc.Runtime == registry.RuntimeProcess || sc.Runtime == registry.RuntimeClaude {
 			continue
 		}
-		if err := exec.Command("docker", "image", "inspect", sc.Image).Run(); err != nil {
+		if err := exec.Command(registry.RuntimeDocker, "image", "inspect", sc.Image).Run(); err != nil {
 			warn(fmt.Sprintf("image %s not found in local registry (pull needed)", sc.Image))
 		}
 	}

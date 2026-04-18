@@ -221,7 +221,7 @@ func newStartCmd() *cobra.Command {
 				cfg := serverConfig(repoRoot, n, entry)
 				resolvePreStart(repoRoot, cfg)
 
-				if cfg.Runtime == "claude" {
+				if cfg.Runtime == registry.RuntimeClaude {
 					fmt.Printf("%s is managed by Claude — no action needed\n", n)
 					continue
 				}
@@ -231,7 +231,7 @@ func newStartCmd() *cobra.Command {
 						return fmt.Errorf("%s: %w", n, err)
 					}
 					switch cfg.Runtime {
-					case "process":
+					case registry.RuntimeProcess:
 						// Stop any existing process before starting a new one.
 						if status, _ := native.Status(n, cfg); status == "running" {
 							_ = native.Stop(n, cfg)
@@ -297,7 +297,7 @@ func newStopCmd() *cobra.Command {
 				entry := fleet.Servers[n]
 				cfg := serverConfig(repoRoot, n, entry)
 
-				if cfg.Runtime == "claude" {
+				if cfg.Runtime == registry.RuntimeClaude {
 					fmt.Printf("%s is managed by Claude — no action needed\n", n)
 					continue
 				}
@@ -308,7 +308,7 @@ func newStopCmd() *cobra.Command {
 
 				var stopErr error
 				switch cfg.Runtime {
-				case "process":
+				case registry.RuntimeProcess:
 					stopErr = native.Stop(n, cfg)
 				default:
 					stopErr = docker.Stop(n)
@@ -353,7 +353,7 @@ func newRestartCmd() *cobra.Command {
 				cfg := serverConfig(repoRoot, n, entry)
 				resolvePreStart(repoRoot, cfg)
 
-				if cfg.Runtime == "claude" {
+				if cfg.Runtime == registry.RuntimeClaude {
 					fmt.Printf("%s is managed by Claude — no action needed\n", n)
 					continue
 				}
@@ -363,7 +363,7 @@ func newRestartCmd() *cobra.Command {
 					fmt.Fprintf(os.Stderr, "deregister %s: %v\n", n, err)
 				}
 				switch cfg.Runtime {
-				case "process":
+				case registry.RuntimeProcess:
 					_ = native.Stop(n, cfg)
 				default:
 					_ = docker.Stop(n)
@@ -376,7 +376,7 @@ func newRestartCmd() *cobra.Command {
 
 				// Start phase.
 				switch cfg.Runtime {
-				case "process":
+				case registry.RuntimeProcess:
 					if err := native.Start(n, cfg); err != nil {
 						return fmt.Errorf("restart %s: %w", n, err)
 					}

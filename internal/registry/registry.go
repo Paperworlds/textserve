@@ -77,6 +77,15 @@ type RegistryEntry struct {
 	Health        Health   `yaml:"health,omitempty"`
 }
 
+// Runtime and protocol constants used across the stack.
+const (
+	RuntimeDocker  = "docker"
+	RuntimeProcess = "process"
+	RuntimeClaude  = "claude"
+	ProtocolHTTP   = "http"
+	ProtocolStdio  = "stdio"
+)
+
 // FleetRegistry is the top-level registry.yaml structure.
 type FleetRegistry struct {
 	Servers map[string]RegistryEntry `yaml:"servers"`

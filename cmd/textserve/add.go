@@ -107,12 +107,12 @@ func newAddCmd() *cobra.Command {
 			// Build tags list.
 			tags := parseTags(tagsFlag)
 			protocol := transport
-			runtime := "docker"
-			if transport != "http" {
+			runtime := registry.RuntimeDocker
+			if transport != registry.ProtocolHTTP {
 				runtime = transport
 			}
-			if protocol == "http" && !containsTag(tags, "docker") {
-				tags = append(tags, "docker")
+			if protocol == registry.ProtocolHTTP && !containsTag(tags, registry.RuntimeDocker) {
+				tags = append(tags, registry.RuntimeDocker)
 			}
 
 			data := addTemplateData{
@@ -164,7 +164,7 @@ func newAddCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&transport, "transport", "http", "transport type (http, native, stdio)")
+	cmd.Flags().StringVar(&transport, "transport", registry.ProtocolHTTP, "transport type (http, native, stdio)")
 	cmd.Flags().IntVar(&port, "port", 0, "host port (auto-assigned in 9880-9899 if omitted)")
 	cmd.Flags().StringVar(&image, "image", "", "Docker image name")
 	cmd.Flags().StringVar(&tagsFlag, "tags", "", "comma-separated tags")
@@ -239,8 +239,8 @@ func appendToRegistry(repoRoot, name, protocol string, port int, image string, t
 	if image != "" {
 		imageLine = fmt.Sprintf("\n    image: \"%s\"", image)
 	}
-	runtime := "docker"
-	if protocol != "http" {
+	runtime := registry.RuntimeDocker
+	if protocol != registry.ProtocolHTTP {
 		runtime = protocol
 	}
 	entry := fmt.Sprintf("\n  %s:%s\n    protocol: %s\n    runtime: %s%s\n    tags: %s\n    deps: []\n    health:\n      endpoint: /health\n      timeout: 5\n",
