@@ -91,7 +91,7 @@ func TestWriteSummaryFile(t *testing.T) {
 		t.Fatalf("writeSummaryFile: %v", err)
 	}
 
-	expectedPath := filepath.Join(tmpHome, ".files", "states", "mcp-fleet.json")
+	expectedPath := filepath.Join(tmpHome, ".files", "states", "textserve.json")
 	data, err := os.ReadFile(expectedPath)
 	if err != nil {
 		t.Fatalf("state file not written at %s: %v", expectedPath, err)

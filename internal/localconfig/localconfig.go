@@ -1,6 +1,7 @@
 // Package localconfig loads the user-local textserve config at
-// ~/.config/textserve/config.yaml. This file is never committed — it holds
-// machine-specific settings such as 1Password reference paths for env vars.
+// ~/.config/paperworlds/textserve/local.yaml. This file is never committed —
+// it holds machine-specific settings such as 1Password reference paths for
+// env vars.
 package localconfig
 
 import (
@@ -13,7 +14,7 @@ import (
 // Path returns the canonical config file path.
 func Path() string {
 	home := os.Getenv("HOME")
-	return filepath.Join(home, ".config", "textserve", "config.yaml")
+	return filepath.Join(home, ".config", "paperworlds", "textserve", "local.yaml")
 }
 
 // ServerOverride holds per-server local overrides.
@@ -23,7 +24,7 @@ type ServerOverride struct {
 	Env map[string]string `yaml:"env"`
 }
 
-// LocalConfig is the top-level structure of ~/.config/textserve/config.yaml.
+// LocalConfig is the top-level structure of ~/.config/paperworlds/textserve/local.yaml.
 type LocalConfig struct {
 	Servers map[string]ServerOverride `yaml:"servers"`
 }

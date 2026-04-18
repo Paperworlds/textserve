@@ -19,7 +19,7 @@ import (
 	"github.com/paperworlds/textserve/internal/registry"
 )
 
-// StatusSummary is the JSON structure written to ~/.files/states/mcp-fleet.json.
+// StatusSummary is the JSON structure written to ~/.files/states/textserve.json.
 type StatusSummary struct {
 	UpdatedAt string   `json:"updated_at"`
 	Healthy   int      `json:"healthy"`
@@ -191,7 +191,7 @@ func writeSummaryFile(s StatusSummary) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create states dir: %w", err)
 	}
-	path := filepath.Join(dir, "mcp-fleet.json")
+	path := filepath.Join(dir, "textserve.json")
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
