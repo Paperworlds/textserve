@@ -1,0 +1,14 @@
+# Archived servers — not loaded by the CLI.
+# Restore by moving entries back to registry.yaml.
+servers:
+  datadog-security:
+    protocol: stdio
+    runtime: claude
+    tags: [security, stdio]
+    deps: []
+    auth:
+      type: op
+      item: "op://Private/Datadog API Keys"
+    health:
+      probe: tool-list
+      timeout: 5
