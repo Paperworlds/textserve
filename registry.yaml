@@ -186,14 +186,3 @@ servers:
       probe: pid
       timeout: 5
 
-  datadog-security:
-    protocol: stdio
-    runtime: claude
-    tags: [security, stdio]
-    deps: []
-    auth:
-      type: op
-      item: "op://Private/Datadog API Keys"
-    health:
-      probe: tool-list
-      timeout: 5
