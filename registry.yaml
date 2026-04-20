@@ -26,7 +26,7 @@ servers:
     deps: []
     auth:
       type: op
-      item: "op://Private/REDACTED"
+      item: "op://Private/Snowflake credentials"
     health:
       endpoint: /health
       timeout: 10
