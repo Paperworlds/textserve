@@ -79,3 +79,11 @@ The following files from the pre-fleet era are safe to remove after a 2-week shi
 - `~/.config/mcp-servers.conf` — replaced by `registry.yaml`
 
 Do **not** remove these until you have verified that `textserve` handles all servers correctly in your workflow.
+
+## Part of Paperworlds
+
+textserve is part of [Paperworlds](https://github.com/paperworlds) — an open org building tools and games around AI agents and text interfaces.
+
+## License
+
+Elastic License 2.0 — see [LICENSE](LICENSE).
