@@ -34,6 +34,18 @@ Credentials are cached at `~/.cache/mcp-snowflake/`.
 - A network policy `MCP_LOCAL_POLICY` with `ALLOWED_IP_LIST = ('0.0.0.0/0')` must be applied to your Snowflake user. Docker connects from the actual network IP, not localhost.
 - Query permissions are configured via `~/.mcp/snowflake-tools.yaml` (mounted read-only into the container).
 
+## Building the image
+
+The `snowflake-mcp` image is built from [Snowflake-Labs/mcp-server-snowflake](https://github.com/Snowflake-Labs/mcp-server-snowflake). The `Dockerfile` here is a copy of the upstream `docker/server/Dockerfile` (last built: v1.3.5).
+
+```bash
+# Rebuild from latest upstream
+./servers/snowflake/build.sh
+
+# Rebuild pinned to a tag
+./servers/snowflake/build.sh v1.3.5
+```
+
 ## Usage
 
 ```bash
