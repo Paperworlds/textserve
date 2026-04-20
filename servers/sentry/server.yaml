@@ -4,8 +4,8 @@ native_cmd: npx
 native_args:
   - "@sentry/mcp-server@latest"
 env:
-  - name: SENTRY_ACCESS_TOKEN
-    # op path configured in ~/.config/textserve/config.yaml (not committed)
+  - name: SENTRY_AUTH_TOKEN
+    # op path configured in ~/.config/paperworlds/textserve/local.yaml (not committed)
     cache: 1h
 tags:
   - monitoring

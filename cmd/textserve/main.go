@@ -12,6 +12,7 @@ import (
 	"github.com/paperworlds/textserve/internal/deps"
 	"github.com/paperworlds/textserve/internal/docker"
 	"github.com/paperworlds/textserve/internal/health"
+	"github.com/paperworlds/textserve/internal/localconfig"
 	"github.com/paperworlds/textserve/internal/native"
 	"github.com/paperworlds/textserve/internal/registry"
 )
@@ -186,6 +187,30 @@ func resolvePreStart(repoRoot string, cfg *registry.ServerConfig) {
 	}
 }
 
+// validateClaudeServer checks that all env vars for a runtime=claude server
+// can be resolved (via local config or static value) before registration.
+func validateClaudeServer(name string, cfg *registry.ServerConfig) error {
+	localCfg, _ := localconfig.Load()
+	localEnv := localCfg.EnvFor(name)
+	var missing []string
+	for _, e := range cfg.Env {
+		ref := localEnv[e.Name]
+		if ref == "" {
+			ref = e.Op
+		}
+		if ref == "" && e.Value == "" {
+			missing = append(missing, e.Name)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf(
+			"%s: missing env vars with no configured source: %s\n  → add to %s under servers.%s.env",
+			name, strings.Join(missing, ", "), localconfig.Path(), name,
+		)
+	}
+	return nil
+}
+
 func newStartCmd() *cobra.Command {
 	var tag string
 	var all bool
@@ -214,7 +239,18 @@ func newStartCmd() *cobra.Command {
 				resolvePreStart(repoRoot, cfg)
 
 				if cfg.Runtime == registry.RuntimeClaude {
-					fmt.Printf("%s is managed by Claude — no action needed\n", n)
+					if err := validateClaudeServer(n, cfg); err != nil {
+						if all {
+							fmt.Fprintf(os.Stderr, "skip %s: %v\n", n, err)
+							failures = append(failures, n)
+							continue
+						}
+						return err
+					}
+					if err := claude.Register(n, cfg); err != nil {
+						return fmt.Errorf("register %s: %w", n, err)
+					}
+					fmt.Printf("registered %s (managed by Claude)\n", n)
 					continue
 				}
 
