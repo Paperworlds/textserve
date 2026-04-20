@@ -16,7 +16,7 @@ import (
 
 // Start launches the native server in the background and writes its PID to cfg.PidFile.
 func Start(name string, cfg *registry.ServerConfig) error {
-	envVars, err := docker.ResolveEnv(cfg)
+	envVars, err := docker.ResolveEnv(name, cfg)
 	if err != nil {
 		return fmt.Errorf("resolve env for %s: %w", name, err)
 	}

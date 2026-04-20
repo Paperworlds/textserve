@@ -8,12 +8,17 @@ import (
 	"strings"
 
 	"github.com/paperworlds/textserve/internal/health"
+	"github.com/paperworlds/textserve/internal/localconfig"
 	"github.com/paperworlds/textserve/internal/op"
 	"github.com/paperworlds/textserve/internal/registry"
 )
 
 // ResolveEnv processes cfg.Env in order and returns "NAME=VALUE" strings.
-func ResolveEnv(cfg *registry.ServerConfig) ([]string, error) {
+// serverName is used to look up op paths from local.yaml when not set in server.yaml.
+func ResolveEnv(serverName string, cfg *registry.ServerConfig) ([]string, error) {
+	localCfg, _ := localconfig.Load()
+	localEnv := localCfg.EnvFor(serverName)
+
 	resolved := make(map[string]string)
 	var result []string
 
@@ -23,6 +28,12 @@ func ResolveEnv(cfg *registry.ServerConfig) ([]string, error) {
 			err error
 		)
 
+		// local.yaml can supply or override the op path for any env var.
+		opPath := ev.Op
+		if ref := localEnv[ev.Name]; ref != "" {
+			opPath = ref
+		}
+
 		switch {
 		case ev.Value != "":
 			val = ev.Value
@@ -30,13 +41,19 @@ func ResolveEnv(cfg *registry.ServerConfig) ([]string, error) {
 		case ev.ValueTemplate != "":
 			val = expandVars(ev.ValueTemplate, resolved)
 
-		case ev.Op != "" && ev.Cache != "":
+		case opPath != "" && ev.Cache != "":
 			// cache key format: "service/field"
 			parts := strings.SplitN(ev.Cache, "/", 2)
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid cache key %q for %s: want service/field", ev.Cache, ev.Name)
 			}
-			val, err = op.Cached(parts[0], parts[1], ev.Op)
+			val, err = op.Cached(parts[0], parts[1], opPath)
+			if err != nil {
+				return nil, fmt.Errorf("resolve %s: %w", ev.Name, err)
+			}
+
+		case opPath != "":
+			val, err = op.Read(opPath)
 			if err != nil {
 				return nil, fmt.Errorf("resolve %s: %w", ev.Name, err)
 			}
@@ -48,7 +65,7 @@ func ResolveEnv(cfg *registry.ServerConfig) ([]string, error) {
 			}
 
 		default:
-			return nil, fmt.Errorf("env var %q has no resolvable source", ev.Name)
+			return nil, fmt.Errorf("env var %q has no resolvable source (add op path to %s)", ev.Name, localconfig.Path())
 		}
 
 		resolved[ev.Name] = val
@@ -94,7 +111,7 @@ func Run(name string, cfg *registry.ServerConfig) error {
 	// Remove any existing container (ignore error — may not exist).
 	_ = exec.Command("docker", "rm", "-f", "mcp-"+name).Run()
 
-	envVars, err := ResolveEnv(cfg)
+	envVars, err := ResolveEnv(name, cfg)
 	if err != nil {
 		return err
 	}

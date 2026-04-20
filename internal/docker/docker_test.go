@@ -15,7 +15,7 @@ func TestResolveEnv_StaticValue(t *testing.T) {
 			{Name: "BAZ", Value: "qux"},
 		},
 	}
-	got, err := docker.ResolveEnv(cfg)
+	got, err := docker.ResolveEnv("test", cfg)
 	if err != nil {
 		t.Fatalf("ResolveEnv: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestResolveEnv_ValueTemplate(t *testing.T) {
 			{Name: "FULL_URL", ValueTemplate: "${BASE_URL}/api"},
 		},
 	}
-	got, err := docker.ResolveEnv(cfg)
+	got, err := docker.ResolveEnv("test", cfg)
 	if err != nil {
 		t.Fatalf("ResolveEnv: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestResolveEnv_ValueTemplate(t *testing.T) {
 
 func TestResolveEnv_Empty(t *testing.T) {
 	cfg := &registry.ServerConfig{}
-	got, err := docker.ResolveEnv(cfg)
+	got, err := docker.ResolveEnv("test", cfg)
 	if err != nil {
 		t.Fatalf("ResolveEnv: %v", err)
 	}
