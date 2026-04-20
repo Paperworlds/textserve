@@ -15,7 +15,7 @@ Slack Search MCP server — full-text search across Slack messages using a user 
 
 ## Auth
 
-1Password item: `op://Private/Slack Bot Token`
+1Password item: `Slack Bot Token` (Private vault)
 
 | Field | Env var |
 |-------|---------|

@@ -18,7 +18,7 @@ Grafana MCP server for Paradex — query dashboards, panels, and metrics.
 
 ## Auth
 
-1Password item: `op://Private/Grafana Paradex`
+1Password item: `Grafana Paradex` (Private vault)
 
 | Field | Env var |
 |-------|---------|

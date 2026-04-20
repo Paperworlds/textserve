@@ -20,7 +20,7 @@ CI/CD MCP server — exposes Jenkins build management tools via the MCP protocol
 
 ## Auth
 
-1Password item: `op://Private/CI Dev Secrets`
+1Password item: `CI Dev Secrets` (Private vault)
 
 | Field | Env var |
 |-------|---------|

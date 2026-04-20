@@ -18,7 +18,7 @@ Grafana MCP server for Paradigmconnect — query dashboards, panels, and metrics
 
 ## Auth
 
-1Password item: `op://Private/Grafana Paradigmconnect`
+1Password item: `Grafana Paradigmconnect` (Private vault)
 
 | Field | Env var |
 |-------|---------|

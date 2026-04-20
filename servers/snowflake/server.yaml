@@ -9,13 +9,11 @@ tags:
   - docker
 env:
   - name: SNOWFLAKE_ACCOUNT
-    op: "op://Private/REDACTED/SNOWFLAKE_ACCOUNT"
+    # op path configured in ~/.config/paperworlds/textserve/local.yaml (not committed)
     cache: "snowflake/account"
   - name: SNOWFLAKE_USER
-    op: "op://Private/REDACTED/SNOWFLAKE_USER"
     cache: "snowflake/user"
   - name: SNOWFLAKE_PASSWORD
-    op: "op://Private/REDACTED/SNOWFLAKE_PASSWORD"
     cache: "snowflake/password"
 volumes:
   - host: "${HOME}/.mcp/snowflake-tools.yaml"

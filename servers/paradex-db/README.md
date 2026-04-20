@@ -18,7 +18,7 @@ Note: This server uses SSE endpoint path (`/sse`), not `/mcp`.
 
 ## Auth
 
-1Password item: `op://Private/Paradex DB`
+1Password item: `Paradex DB` (Private vault)
 
 Database credentials are cached via `cache_file` entries:
 - `~/.cache/paradex-db-mcp/host` — DB host

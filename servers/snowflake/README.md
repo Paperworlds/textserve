@@ -18,7 +18,7 @@ Snowflake MCP server — provides read-only SQL query access to Snowflake.
 
 ## Auth
 
-1Password item: `op://Private/REDACTED` (uses item ID to avoid duplicate name ambiguity)
+1Password item: Snowflake credentials (Private vault). Op paths configured in `~/.config/paperworlds/textserve/local.yaml`.
 
 | Field | Env var |
 |-------|---------|

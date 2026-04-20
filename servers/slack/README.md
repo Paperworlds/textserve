@@ -19,7 +19,7 @@ Slack MCP server — read channels, send messages, and interact with Slack.
 
 ## Auth
 
-1Password item: `op://Private/Slack Bot Token`
+1Password item: `Slack Bot Token` (Private vault)
 
 | Field | Env var |
 |-------|---------|

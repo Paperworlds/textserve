@@ -18,7 +18,7 @@ This server is registered and managed directly by Claude Code, not through Docke
 
 ## Auth
 
-1Password item: `op://Private/Sentry MCP`
+1Password item: `Sentry MCP` (Private vault)
 
 The SENTRY_TOKEN is injected as an environment variable when Claude Code starts the MCP process.
 

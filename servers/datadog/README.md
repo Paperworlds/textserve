@@ -20,7 +20,7 @@ Datadog MCP server — query metrics, monitors, logs, and events.
 
 ## Auth
 
-1Password item: `op://Private/Datadog API Keys`
+1Password item: `Datadog API Keys` (Private vault)
 
 | Field | Env var |
 |-------|---------|

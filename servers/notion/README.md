@@ -20,7 +20,7 @@ Notion MCP server — read and write Notion pages, databases, and blocks.
 
 ## Auth
 
-1Password item: `op://Private/Notion MCP`
+1Password item: `Notion MCP` (Private vault)
 
 | Field | Env var |
 |-------|---------|
