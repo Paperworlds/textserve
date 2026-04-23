@@ -1,0 +1,23 @@
+ideas:
+
+  - id: mcp-proxy
+    title: "textserve proxy — single aggregating MCP endpoint"
+    status: idea
+    summary: |
+      A thin Go HTTP MCP server that reads registry.yaml, connects to all
+      running HTTP MCP servers, namespaces their tools (<server>__<tool>),
+      and exposes one endpoint (e.g. http://localhost:9900/mcp).
+      Claude registers only the proxy instead of N separate servers.
+    benefits:
+      - claude.json reduced from N entries to 1
+      - Cleaner /mcp panel
+      - textserve still manages the fleet; proxy is just the Claude-facing layer
+    tradeoffs:
+      - All tools visible upfront → larger context window hit
+      - Tool namespacing required to avoid collisions (snowflake__execute_query)
+      - Proxy must degrade gracefully when a backend server dies
+      - Extra hop latency
+    alternatives_considered:
+      - sparfenyuk/mcp-proxy: Python, stdio-only, doesn't read registry.yaml
+      - supergateway: stdio↔SSE bridge, not a fleet aggregator
+    key_decision: namespacing strategy (<server>__<tool> vs <server>/<tool>)
