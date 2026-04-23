@@ -273,9 +273,66 @@ func validateClaudeServer(name string, cfg *registry.ServerConfig) error {
 	return nil
 }
 
+// runtimeStatus returns the running status for docker or process servers.
+func runtimeStatus(name string, cfg *registry.ServerConfig) string {
+	if cfg.Runtime == registry.RuntimeProcess {
+		s, _ := native.Status(name, cfg)
+		return s
+	}
+	s, _ := docker.Status(name)
+	return s
+}
+
+// startServer executes the full start sequence for a single server and returns
+// a human-readable action string ("started", "registered", "skipped").
+func startServer(n string, cfg *registry.ServerConfig, repoRoot string, entry registry.RegistryEntry, force bool) (string, error) {
+	if cfg.Runtime == registry.RuntimeClaude {
+		if !shouldRegister(repoRoot, n, entry, force) {
+			return "skipped", nil
+		}
+		if err := validateClaudeServer(n, cfg); err != nil {
+			return "", err
+		}
+		if err := claude.Register(n, cfg); err != nil {
+			return "", fmt.Errorf("register %s: %w", n, err)
+		}
+		afterRegister(repoRoot, n, entry)
+		return "registered", nil
+	}
+
+	// docker / process runtime
+	if !force && runtimeStatus(n, cfg) == health.StatusRunning && claude.IsRegistered(n) {
+		return "skipped", nil
+	}
+	if err := deps.Check(cfg.Deps); err != nil {
+		return "", fmt.Errorf("%s: %w", n, err)
+	}
+	switch cfg.Runtime {
+	case registry.RuntimeProcess:
+		if status, _ := native.Status(n, cfg); status == health.StatusRunning {
+			_ = native.Stop(n, cfg)
+		}
+		if err := native.Start(n, cfg); err != nil {
+			return "", fmt.Errorf("start %s: %w", n, err)
+		}
+	default: // docker
+		if err := docker.Run(n, cfg); err != nil {
+			return "", fmt.Errorf("run %s: %w", n, err)
+		}
+	}
+	waitForHealthy(n, cfg)
+	claude.Deregister(n, cfg) //nolint:errcheck — clear stale entry before re-adding
+	if err := claude.Register(n, cfg); err != nil {
+		return "", fmt.Errorf("register %s: %w", n, err)
+	}
+	afterRegister(repoRoot, n, entry)
+	return "started", nil
+}
+
 func newStartCmd() *cobra.Command {
 	var tag string
 	var all bool
+	var force bool
 	cmd := &cobra.Command{
 		Use:   "start [name]",
 		Short: "Start one or more MCP servers",
@@ -300,53 +357,7 @@ func newStartCmd() *cobra.Command {
 				cfg := serverConfig(repoRoot, n, entry)
 				resolvePreStart(repoRoot, cfg)
 
-				if cfg.Runtime == registry.RuntimeClaude {
-					if !shouldRegister(repoRoot, n, fleet.Servers[n], false) {
-						continue
-					}
-					if err := validateClaudeServer(n, cfg); err != nil {
-						if all {
-							fmt.Fprintf(os.Stderr, "skip %s: %v\n", n, err)
-							failures = append(failures, n)
-							continue
-						}
-						return err
-					}
-					if err := claude.Register(n, cfg); err != nil {
-						return fmt.Errorf("register %s: %w", n, err)
-					}
-					afterRegister(repoRoot, n, fleet.Servers[n])
-					fmt.Printf("registered %s (managed by Claude)\n", n)
-					continue
-				}
-
-				startErr := func() error {
-					if err := deps.Check(cfg.Deps); err != nil {
-						return fmt.Errorf("%s: %w", n, err)
-					}
-					switch cfg.Runtime {
-					case registry.RuntimeProcess:
-						// Stop any existing process before starting a new one.
-						if status, _ := native.Status(n, cfg); status == health.StatusRunning {
-							_ = native.Stop(n, cfg)
-						}
-						if err := native.Start(n, cfg); err != nil {
-							return fmt.Errorf("start %s: %w", n, err)
-						}
-					default: // docker
-						if err := docker.Run(n, cfg); err != nil {
-							return fmt.Errorf("run %s: %w", n, err)
-						}
-					}
-					waitForHealthy(n, cfg)
-					claude.Deregister(n, cfg) //nolint:errcheck — clear stale entry before re-adding
-					if err := claude.Register(n, cfg); err != nil {
-						return fmt.Errorf("register %s: %w", n, err)
-					}
-					afterRegister(repoRoot, n, fleet.Servers[n])
-					return nil
-				}()
-
+				action, startErr := startServer(n, cfg, repoRoot, entry, force)
 				if startErr != nil {
 					if all {
 						fmt.Fprintf(os.Stderr, "skip %s: %v\n", n, startErr)
@@ -355,7 +366,14 @@ func newStartCmd() *cobra.Command {
 					}
 					return startErr
 				}
-				fmt.Printf("started %s\n", n)
+				switch action {
+				case "skipped":
+					fmt.Printf("%s already running and registered — skipping (use --force to restart)\n", n)
+				case "registered":
+					fmt.Printf("registered %s (managed by Claude)\n", n)
+				default:
+					fmt.Printf("started %s\n", n)
+				}
 			}
 			if len(failures) > 0 {
 				return fmt.Errorf("failed to start: %s", strings.Join(failures, ", "))
@@ -365,6 +383,7 @@ func newStartCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&tag, "tag", "", "start all servers with this tag")
 	cmd.Flags().BoolVar(&all, "all", false, "start all servers in the fleet")
+	cmd.Flags().BoolVar(&force, "force", false, "restart even if already running and registered")
 	return cmd
 }
 
