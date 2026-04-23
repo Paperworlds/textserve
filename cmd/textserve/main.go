@@ -14,6 +14,7 @@ import (
 	"github.com/paperworlds/textserve/internal/health"
 	"github.com/paperworlds/textserve/internal/localconfig"
 	"github.com/paperworlds/textserve/internal/native"
+	"github.com/paperworlds/textserve/internal/regcache"
 	"github.com/paperworlds/textserve/internal/registry"
 )
 
@@ -187,6 +188,39 @@ func resolvePreStart(repoRoot string, cfg *registry.ServerConfig) {
 	}
 }
 
+// shouldRegister returns true if the server needs to be (re-)registered.
+// It skips registration when the server is already registered and server.yaml
+// has not changed since the last registration.
+func shouldRegister(repoRoot, name string, entry registry.RegistryEntry, force bool) bool {
+	if force {
+		return true
+	}
+	if !claude.IsRegistered(name) {
+		return true
+	}
+	entryYAML, _ := registry.EntryYAML(entry)
+	current, err := regcache.ComputeServerYAMLHash(repoRoot, name, entryYAML)
+	if err != nil {
+		return true
+	}
+	stored, err := regcache.ReadStoredHash(name)
+	if err != nil || stored != current {
+		return true
+	}
+	fmt.Printf("%s config unchanged — skipping re-register\n", name)
+	return false
+}
+
+// afterRegister persists the current server.yaml hash after a successful registration.
+func afterRegister(repoRoot, name string, entry registry.RegistryEntry) {
+	entryYAML, _ := registry.EntryYAML(entry)
+	hash, err := regcache.ComputeServerYAMLHash(repoRoot, name, entryYAML)
+	if err != nil {
+		return
+	}
+	_ = regcache.WriteHash(name, hash)
+}
+
 // validateClaudeServer checks that all env vars for a runtime=claude server
 // can be resolved (via local config or static value) before registration.
 func validateClaudeServer(name string, cfg *registry.ServerConfig) error {
@@ -239,6 +273,9 @@ func newStartCmd() *cobra.Command {
 				resolvePreStart(repoRoot, cfg)
 
 				if cfg.Runtime == registry.RuntimeClaude {
+					if !shouldRegister(repoRoot, n, fleet.Servers[n], false) {
+						continue
+					}
 					if err := validateClaudeServer(n, cfg); err != nil {
 						if all {
 							fmt.Fprintf(os.Stderr, "skip %s: %v\n", n, err)
@@ -250,6 +287,7 @@ func newStartCmd() *cobra.Command {
 					if err := claude.Register(n, cfg); err != nil {
 						return fmt.Errorf("register %s: %w", n, err)
 					}
+					afterRegister(repoRoot, n, fleet.Servers[n])
 					fmt.Printf("registered %s (managed by Claude)\n", n)
 					continue
 				}
@@ -276,6 +314,7 @@ func newStartCmd() *cobra.Command {
 					if err := claude.Register(n, cfg); err != nil {
 						return fmt.Errorf("register %s: %w", n, err)
 					}
+					afterRegister(repoRoot, n, fleet.Servers[n])
 					return nil
 				}()
 

@@ -60,6 +60,7 @@ type ServerConfig struct {
 	NativeVenv    string   `yaml:"native_venv,omitempty"`
 	Deps          []Dep    `yaml:"deps,omitempty"`
 	Health        Health   `yaml:"health,omitempty"`
+	HealthWait    int      `yaml:"health_wait,omitempty"`
 	Headers       []string `yaml:"headers,omitempty"`
 	DisabledTools []string `yaml:"disabled_tools,omitempty"`
 }
@@ -142,6 +143,11 @@ func ServerConfigFromEntry(entry RegistryEntry) *ServerConfig {
 		Deps:          entry.Deps,
 		Health:        entry.Health,
 	}
+}
+
+// EntryYAML returns the YAML encoding of a RegistryEntry for use as a hash fallback.
+func EntryYAML(e RegistryEntry) ([]byte, error) {
+	return yaml.Marshal(e)
 }
 
 func (r *FleetRegistry) FilterByTag(tag string) []string {
