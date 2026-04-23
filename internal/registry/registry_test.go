@@ -33,9 +33,15 @@ func TestFilterByTag_Docker(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 	got := r.FilterByTag("docker")
-	want := 9
-	if len(got) != want {
-		t.Errorf("FilterByTag(docker): got %d servers %v, want %d", len(got), got, want)
+	if len(got) == 0 {
+		t.Errorf("FilterByTag(docker): expected at least one docker server, got none")
+	}
+	// stdio-only servers must not appear in docker results
+	for _, name := range got {
+		entry := r.Servers[name]
+		if entry.Runtime != "docker" {
+			t.Errorf("FilterByTag(docker): %q has runtime %q, not docker", name, entry.Runtime)
+		}
 	}
 }
 

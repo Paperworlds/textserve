@@ -213,13 +213,16 @@ func uptimeFor(name string, cfg *registry.ServerConfig) string {
 
 func dockerUptime(name string) string {
 	out, err := exec.Command(registry.RuntimeDocker, "inspect",
-		"--format", "{{.State.StartedAt}}",
+		"--format", "{{.State.Running}}|{{.State.StartedAt}}",
 		"mcp-"+name).Output()
 	if err != nil {
 		return "-"
 	}
-	startedAt := strings.TrimSpace(string(out))
-	t, err := time.Parse(time.RFC3339Nano, startedAt)
+	parts := strings.SplitN(strings.TrimSpace(string(out)), "|", 2)
+	if len(parts) != 2 || parts[0] != "true" {
+		return "-"
+	}
+	t, err := time.Parse(time.RFC3339Nano, parts[1])
 	if err != nil {
 		return "-"
 	}

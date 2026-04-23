@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -148,7 +149,7 @@ func Run(name string, cfg *registry.ServerConfig) error {
 	}
 
 	c := exec.Command("docker", args...)
-	c.Stdout = os.Stderr
+	c.Stdout = io.Discard // container ID from `docker run -d` — not useful output
 	c.Stderr = os.Stderr
 	return c.Run()
 }

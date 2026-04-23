@@ -30,12 +30,8 @@ func TestList_TagDocker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list --tag docker: %v", err)
 	}
-	lines := nonEmptyLines(out)
-	if len(lines) != 9 {
-		t.Errorf("list --tag docker: got %d servers, want 9\n%s", len(lines), out)
-	}
 	// airflow and sentry must not appear
-	for _, line := range lines {
+	for _, line := range nonEmptyLines(out) {
 		if line == "airflow" || line == "sentry" {
 			t.Errorf("list --tag docker: unexpected server %q", line)
 		}

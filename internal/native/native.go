@@ -53,11 +53,16 @@ func Start(name string, cfg *registry.ServerConfig) error {
 			nativeCmd = candidate
 		}
 	}
+	logFile, logErr := openLogFile(name)
+	if logErr != nil {
+		logFile = os.Stderr
+	}
+
 	cmd := exec.Command(nativeCmd, args...)
 	cmd.Env = env
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
+	cmd.Stdin = nil
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start %s: %w", name, err)
@@ -110,6 +115,17 @@ func Status(name string, cfg *registry.ServerConfig) (string, error) {
 		return health.StatusStopped, nil
 	}
 	return health.StatusRunning, nil
+}
+
+// openLogFile returns a file to capture process stdout/stderr.
+// Path: ~/.cache/textserve/<name>.log
+func openLogFile(name string) (*os.File, error) {
+	dir := filepath.Join(os.Getenv("HOME"), ".cache", "textserve")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	return os.OpenFile(filepath.Join(dir, name+".log"),
+		os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 }
 
 func readPID(path string) (int, error) {

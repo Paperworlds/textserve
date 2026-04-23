@@ -1,0 +1,19 @@
+image: mcp-airbyte
+protocol: http
+runtime: docker
+port: 9893
+container_port: 9000
+endpoint_path: /mcp
+tags:
+  - data
+  - docker
+env:
+  - name: AIRBYTE_API_URL
+    value: "http://host.docker.internal:18001"
+pre_start: "servers/airbyte/pre-start.sh"
+deps:
+  - cmd: "kubectl get svc airbyte-helmv2-airbyte-server-svc -n airbyte-helmv2"
+    hint: "Run: kubectl port-forward svc/airbyte-helmv2-airbyte-server-svc 18001:8001 -n airbyte-helmv2"
+health:
+  endpoint: /health
+  timeout: 10

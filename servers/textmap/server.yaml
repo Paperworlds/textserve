@@ -1,0 +1,19 @@
+protocol: stdio
+runtime: claude
+native_cmd: uv
+native_args:
+  - run
+  - --directory
+  - /Users/projects/personal/paperworlds/textmap
+  - python
+  - -m
+  - textmap_mcp
+tags:
+  - knowledge
+  - memory
+  - stdio
+deps: []
+health:
+  probe: tool-list
+  timeout: 5
+disabled_tools: []

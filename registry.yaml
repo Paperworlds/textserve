@@ -63,22 +63,6 @@ servers:
       endpoint: /health
       timeout: 5
 
-  airbyte:
-    image: "mcp-airbyte"
-    protocol: http
-    runtime: docker
-    port: 9893
-    container_port: 9000
-    endpoint_path: /mcp
-    tags: [data, docker]
-    deps:
-      - cmd: "kubectl get svc airbyte-helmv2-airbyte-server-svc -n airbyte-helmv2"
-        hint: "Run: kubectl port-forward svc/airbyte-helmv2-airbyte-server-svc 18001:8001 -n airbyte-helmv2"
-    auth:
-      type: none
-    health:
-      endpoint: /health
-      timeout: 10
 
   slack:
     image: "zencoderai/slack-mcp:latest"
@@ -177,12 +161,12 @@ servers:
       probe: tool-list
       timeout: 5
 
-  graph:
+  textmap:
     protocol: stdio
-    runtime: process
-    tags: [native, knowledge, memory]
+    runtime: claude
+    tags: [knowledge, memory, stdio]
     deps: []
     health:
-      probe: pid
+      probe: tool-list
       timeout: 5
 

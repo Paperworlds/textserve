@@ -1,0 +1,21 @@
+protocol: stdio
+runtime: process
+pid_file: /tmp/.mcp-graph-mcp.pid
+native_cmd: "/Users/paulie/.local/share/uv/tools/graph-roadmap/bin/python"
+native_args:
+  - "-m"
+  - "graph_mcp"
+native_venv: "/Users/paulie/.local/share/uv/tools/graph-roadmap"
+tags:
+  - native
+  - knowledge
+  - memory
+deps: []
+env:
+  - name: GRAPH_MCP_DAEMON
+    value: "1"
+  - name: FASTMCP_LOG_LEVEL
+    value: "ERROR"
+health:
+  probe: pid
+  timeout: 5
