@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -188,6 +189,33 @@ func resolvePreStart(repoRoot string, cfg *registry.ServerConfig) {
 	}
 }
 
+// waitForHealthy polls the health probe until the server is healthy or the
+// wait deadline expires. If the first probe returns StatusUnknown (no probe
+// configured) it returns immediately without a warning. On timeout it prints
+// a warning but does not block registration.
+func waitForHealthy(name string, cfg *registry.ServerConfig) {
+	timeout := cfg.HealthWait
+	if timeout <= 0 {
+		timeout = 15
+	}
+	// First probe — bail early if no probe is configured.
+	first, _ := health.Probe(name, cfg)
+	if first == health.StatusHealthy {
+		return
+	}
+	if first == health.StatusUnknown {
+		return
+	}
+	deadline := time.Now().Add(time.Duration(timeout) * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(500 * time.Millisecond)
+		if s, _ := health.Probe(name, cfg); s == health.StatusHealthy {
+			return
+		}
+	}
+	fmt.Fprintf(os.Stderr, "warning: %s did not become healthy within %ds, registering anyway\n", name, timeout)
+}
+
 // shouldRegister returns true if the server needs to be (re-)registered.
 // It skips registration when the server is already registered and server.yaml
 // has not changed since the last registration.
@@ -310,6 +338,7 @@ func newStartCmd() *cobra.Command {
 							return fmt.Errorf("run %s: %w", n, err)
 						}
 					}
+					waitForHealthy(n, cfg)
 					claude.Deregister(n, cfg) //nolint:errcheck — clear stale entry before re-adding
 					if err := claude.Register(n, cfg); err != nil {
 						return fmt.Errorf("register %s: %w", n, err)
@@ -452,9 +481,11 @@ func newRestartCmd() *cobra.Command {
 						return fmt.Errorf("restart %s: %w", n, err)
 					}
 				}
+				waitForHealthy(n, cfg)
 				if err := claude.Register(n, cfg); err != nil {
 					return fmt.Errorf("register %s: %w", n, err)
 				}
+				afterRegister(repoRoot, n, fleet.Servers[n])
 				fmt.Printf("restarted %s\n", n)
 			}
 			return nil
