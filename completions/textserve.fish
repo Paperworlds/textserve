@@ -5,7 +5,7 @@
 complete -c textserve -f
 
 # Subcommands
-set -l subcommands start stop restart logs list status health doctor preflight add
+set -l subcommands start stop restart up down logs list status health doctor preflight add
 
 for sub in $subcommands
     complete -c textserve -n "__fish_use_subcommand $subcommands" -a $sub
@@ -21,7 +21,7 @@ end
 
 # --tag flag (single tag) for: start stop restart list status health
 set -l tag_values ci docker data monitoring comms native stdio
-set -l tag_cmds start stop restart list status health
+set -l tag_cmds start stop restart up down list status health
 for sub in $tag_cmds
     for val in $tag_values
         complete -c textserve -n "__fish_seen_subcommand_from $sub" \

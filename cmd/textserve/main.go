@@ -68,6 +68,8 @@ func buildRoot() *cobra.Command {
 		newDoctorCmd(),
 		newPreflightCmd(),
 		newAddCmd(),
+		newUpCmd(),
+		newDownCmd(),
 	)
 	return root
 }
