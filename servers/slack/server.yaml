@@ -20,6 +20,8 @@ extra_args:
   - "http"
   - "--port"
   - "9000"
+headers:
+  - "Authorization: Bearer mcp-slack-local"
 health:
   endpoint: /health
   timeout: 5
