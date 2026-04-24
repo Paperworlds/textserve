@@ -9,9 +9,9 @@ func TestUpDown_CommandsRegistered(t *testing.T) {
 	var foundUp, foundDown bool
 	for _, sub := range root.Commands() {
 		switch sub.Use {
-		case "up [name]":
+		case "up [name[,name...]]":
 			foundUp = true
-		case "down [name]":
+		case "down [name[,name...]]":
 			foundDown = true
 		}
 	}

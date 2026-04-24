@@ -18,7 +18,7 @@ func newUpCmd() *cobra.Command {
 	var tag string
 	var all bool
 	cmd := &cobra.Command{
-		Use:   "up [name]",
+		Use:   "up [name[,name...]]",
 		Short: "Bring one or more MCP servers to desired state (start + register)",
 		Long:  "Starts and registers servers that are not running. Skips servers that are already running and registered. Use 'start --force' to restart a running server.",
 		Args:  cobra.MaximumNArgs(1),
@@ -103,7 +103,7 @@ func newDownCmd() *cobra.Command {
 	var tag string
 	var all bool
 	cmd := &cobra.Command{
-		Use:   "down [name]",
+		Use:   "down [name[,name...]]",
 		Short: "Stop and deregister one or more MCP servers",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

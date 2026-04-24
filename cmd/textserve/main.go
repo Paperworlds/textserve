@@ -145,10 +145,19 @@ func resolveNames(fleet *registry.FleetRegistry, name, tag string, all bool) ([]
 		return fleet.ListNames(), nil
 	}
 	if name != "" {
-		if _, ok := fleet.Servers[name]; !ok {
-			return nil, fmt.Errorf("unknown server %q", name)
+		parts := strings.Split(name, ",")
+		var names []string
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			if _, ok := fleet.Servers[p]; !ok {
+				return nil, fmt.Errorf("unknown server %q", p)
+			}
+			names = append(names, p)
 		}
-		return []string{name}, nil
+		return names, nil
 	}
 	if tag != "" {
 		names := fleet.FilterByTag(tag)
