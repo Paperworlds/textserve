@@ -47,7 +47,7 @@ The user's personal `registry.yaml` should live at `~/.local/mcpf/registry.yaml`
 has a `root:` field — update it to point at where `registry.yaml` now lives,
 or update `findRepoRoot()` to also check `~/.local/mcpf/` as a default location.
 
-Check how other paperworlds text projects (textworld, paperagents) handle
+Check how other paperworlds text projects (textworld, textprompts) handle
 user-specific config paths for the right pattern.
 
 ### 4. Verify

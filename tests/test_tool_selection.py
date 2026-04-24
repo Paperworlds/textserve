@@ -80,20 +80,20 @@ def test_monitoring_intent_returns_monitoring_tag():
 # tool_selection module unit tests
 # ---------------------------------------------------------------------------
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "paperworlds" / "paperagents" / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "paperworlds" / "textprompts" / "src"))
 
 try:
-    from paperagents.tool_selection import (
+    from textprompts.tool_selection import (
         _extract_intent,
         labels_to_tags,
         DEFAULT_TAGS,
     )
-    HAS_PAPERAGENTS = True
+    HAS_TEXTPROMPTS = True
 except ImportError:
-    HAS_PAPERAGENTS = False
+    HAS_TEXTPROMPTS = False
 
 
-@pytest.mark.skipif(not HAS_PAPERAGENTS, reason="paperagents not importable")
+@pytest.mark.skipif(not HAS_TEXTPROMPTS, reason="textprompts not importable")
 def test_extract_intent_tasks_section():
     """Should extract ## Tasks section content."""
     body = "# Title\n\nSome intro.\n\n## Tasks\n\nQuery snowflake for data.\n\n## Notes\n\nstuff"
@@ -102,7 +102,7 @@ def test_extract_intent_tasks_section():
     assert "Notes" not in intent
 
 
-@pytest.mark.skipif(not HAS_PAPERAGENTS, reason="paperagents not importable")
+@pytest.mark.skipif(not HAS_TEXTPROMPTS, reason="textprompts not importable")
 def test_extract_intent_fallback():
     """Should fall back to first 500 chars when no ## Tasks section."""
     body = "x" * 600
@@ -110,7 +110,7 @@ def test_extract_intent_fallback():
     assert len(intent) == 500
 
 
-@pytest.mark.skipif(not HAS_PAPERAGENTS, reason="paperagents not importable")
+@pytest.mark.skipif(not HAS_TEXTPROMPTS, reason="textprompts not importable")
 def test_labels_to_tags_snowflake():
     """Node with 'snowflake' in ID or labels should map to ['data']."""
     mappings = {"snowflake": ["data"], "data": ["data"]}
@@ -119,7 +119,7 @@ def test_labels_to_tags_snowflake():
     assert "data" in tags
 
 
-@pytest.mark.skipif(not HAS_PAPERAGENTS, reason="paperagents not importable")
+@pytest.mark.skipif(not HAS_TEXTPROMPTS, reason="textprompts not importable")
 def test_labels_to_tags_empty_returns_empty():
     """No matching labels → empty list (caller applies fallback)."""
     mappings = {"snowflake": ["data"]}
@@ -128,7 +128,7 @@ def test_labels_to_tags_empty_returns_empty():
     assert tags == []
 
 
-@pytest.mark.skipif(not HAS_PAPERAGENTS, reason="paperagents not importable")
+@pytest.mark.skipif(not HAS_TEXTPROMPTS, reason="textprompts not importable")
 def test_default_tags_constant():
     assert DEFAULT_TAGS == ["docker"]
 
