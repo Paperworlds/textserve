@@ -5,3 +5,4 @@ reports/
 tests/__pycache__/
 # server.local.yaml — local overrides (op paths, personal env); never commit
 servers/*/server.local.yaml
+.memsearch/
