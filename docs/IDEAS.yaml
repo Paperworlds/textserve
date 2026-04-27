@@ -21,3 +21,24 @@ ideas:
       - sparfenyuk/mcp-proxy: Python, stdio-only, doesn't read registry.yaml
       - supergateway: stdio↔SSE bridge, not a fleet aggregator
     key_decision: namespacing strategy (<server>__<tool> vs <server>/<tool>)
+
+  - id: mcp-ify-closed-platforms
+    title: "MCP bridge for closed platforms (Bloomberg, Figma, Linear, Notion)"
+    status: idea
+    source: "textread digest 2026-04-27-2 — brainstorm item 3, inspired by claude_tradingview.pdf"
+    summary: |
+      The TradingView MCP connector works by reading DOM values and automating
+      UI actions — no public API required. The same pattern generalises to any
+      desktop or web app: inject a WebSocket bridge, expose primitives
+      (read, write, click, screenshot), register them as MCP tools for Claude.
+      Write a generalisable guide ("MCP-ifying a closed platform") and apply it
+      to at least one high-value target: Bloomberg Terminal, Figma, Linear, or Notion.
+    benefits:
+      - Unlocks Claude tool use against platforms with no official MCP support
+      - WebSocket bridge approach is reusable across targets
+      - Low protocol overhead — piggybacks on existing UI rather than requiring API access
+    tradeoffs:
+      - Brittle to UI changes (DOM selectors break on app updates)
+      - Desktop apps may need Electron/CDP hooks vs web apps using content scripts
+      - ToS risk on closed platforms (Bloomberg in particular)
+    key_decision: browser extension vs injected content script vs native app automation (Playwright/CDP)
