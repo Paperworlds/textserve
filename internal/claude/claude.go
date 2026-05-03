@@ -13,7 +13,11 @@ import (
 )
 
 // configPath returns the absolute path to the user-scoped Claude config.
+// Respects $CLAUDE_CONFIG_DIR when set (e.g. by textaccounts profile switching).
 func configPath() string {
+	if d := os.Getenv("CLAUDE_CONFIG_DIR"); d != "" {
+		return filepath.Join(d, ".claude.json")
+	}
 	home := os.Getenv("HOME")
 	return filepath.Join(home, ".claude-work", ".claude.json")
 }

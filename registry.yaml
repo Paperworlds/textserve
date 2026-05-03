@@ -170,3 +170,21 @@ servers:
       probe: tool-list
       timeout: 5
 
+profiles:
+  coding:
+    description: "Code review and CI"
+    servers: [jenkins, sentry]
+    tags: [knowledge]
+
+  data:
+    description: "Data analysis and observability"
+    tags: [data, monitoring]
+
+  comms:
+    description: "Slack and notifications"
+    tags: [comms]
+
+  minimal:
+    description: "Knowledge graph only"
+    servers: [textmap]
+

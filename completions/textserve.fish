@@ -5,7 +5,7 @@
 complete -c textserve -f
 
 # Subcommands
-set -l subcommands start stop restart up down logs list status health doctor preflight add
+set -l subcommands start stop restart up down logs list status health doctor preflight add profile
 
 for sub in $subcommands
     complete -c textserve -n "__fish_use_subcommand $subcommands" -a $sub
@@ -42,6 +42,19 @@ complete -c textserve -n "__fish_seen_subcommand_from logs" \
 # preflight --json
 complete -c textserve -n "__fish_seen_subcommand_from preflight" \
     -l json -d "emit JSON report"
+
+# profile sub-subcommands and profile name completions
+complete -c textserve -n "__fish_seen_subcommand_from profile; and not __fish_seen_subcommand_from list show use" \
+    -a "list" -d "list profiles"
+complete -c textserve -n "__fish_seen_subcommand_from profile; and not __fish_seen_subcommand_from list show use" \
+    -a "show" -d "show profile server list"
+complete -c textserve -n "__fish_seen_subcommand_from profile; and not __fish_seen_subcommand_from list show use" \
+    -a "use" -d "converge fleet to profile"
+for sub in show use
+    complete -c textserve -n "__fish_seen_subcommand_from $sub" \
+        -a "(textserve profile list 2>/dev/null | tail -n +3 | awk '{print \$1}')" \
+        -d "profile"
+end
 
 # add flags
 complete -c textserve -n "__fish_seen_subcommand_from add" \

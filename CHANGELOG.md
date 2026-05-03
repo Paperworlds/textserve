@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.14
+
+- Add `textserve profile` command — `list`, `show`, and `use` subcommands
+- `textserve profile use <name>` converges the fleet: brings up profile servers, brings down the rest
+- Profiles defined in `registry.yaml` under `profiles:` — support explicit `servers:` lists and `tags:` expansion
+- Fix `CLAUDE_CONFIG_DIR`: `register`/`deregister` now write to the active textaccounts profile's `claude.json` when `$CLAUDE_CONFIG_DIR` is set
+- Extract `downServer()` helper (used by both `down` and `profile use`)
+
 ## v0.1.13
 
 - Fix slack MCP 401: add `Authorization: Bearer` header to server registration

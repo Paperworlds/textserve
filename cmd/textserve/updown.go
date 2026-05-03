@@ -99,6 +99,21 @@ func upServer(n string, cfg *registry.ServerConfig, repoRoot string, entry regis
 	return startServer(n, cfg, repoRoot, entry, false)
 }
 
+// downServer deregisters and stops a single server. Returns an error on stop failure.
+// claude-runtime servers are silently skipped (they need no process management).
+func downServer(n string, cfg *registry.ServerConfig) error {
+	if cfg.Runtime == registry.RuntimeClaude {
+		return nil
+	}
+	claude.Deregister(n, cfg) //nolint:errcheck
+	switch cfg.Runtime {
+	case registry.RuntimeProcess:
+		return native.Stop(n, cfg)
+	default:
+		return docker.Stop(n)
+	}
+}
+
 func newDownCmd() *cobra.Command {
 	var tag string
 	var all bool
@@ -123,24 +138,12 @@ func newDownCmd() *cobra.Command {
 			for _, n := range names {
 				entry := fleet.Servers[n]
 				cfg := serverConfig(repoRoot, n, entry)
-
 				if cfg.Runtime == registry.RuntimeClaude {
 					fmt.Printf("%s is managed by Claude — no action needed\n", n)
 					continue
 				}
-
-				if err := claude.Deregister(n, cfg); err != nil {
-					fmt.Fprintf(os.Stderr, "deregister %s: %v\n", n, err)
-				}
-				var stopErr error
-				switch cfg.Runtime {
-				case registry.RuntimeProcess:
-					stopErr = native.Stop(n, cfg)
-				default:
-					stopErr = docker.Stop(n)
-				}
-				if stopErr != nil {
-					fmt.Fprintf(os.Stderr, "stop %s: %v\n", n, stopErr)
+				if err := downServer(n, cfg); err != nil {
+					fmt.Fprintf(os.Stderr, "stop %s: %v\n", n, err)
 					continue
 				}
 				fmt.Printf("stopped %s\n", n)

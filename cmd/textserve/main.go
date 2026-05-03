@@ -70,6 +70,7 @@ func buildRoot() *cobra.Command {
 		newAddCmd(),
 		newUpCmd(),
 		newDownCmd(),
+		newProfileCmd(),
 	)
 	return root
 }

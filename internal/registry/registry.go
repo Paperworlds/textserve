@@ -87,9 +87,17 @@ const (
 	ProtocolStdio  = "stdio"
 )
 
+// ProfileEntry defines a named set of servers for a session type.
+type ProfileEntry struct {
+	Description string   `yaml:"description,omitempty"`
+	Servers     []string `yaml:"servers,omitempty"`
+	Tags        []string `yaml:"tags,omitempty"`
+}
+
 // FleetRegistry is the top-level registry.yaml structure.
 type FleetRegistry struct {
-	Servers map[string]RegistryEntry `yaml:"servers"`
+	Servers  map[string]RegistryEntry `yaml:"servers"`
+	Profiles map[string]ProfileEntry  `yaml:"profiles,omitempty"`
 }
 
 // Load parses registry.yaml at the given path.
@@ -148,6 +156,36 @@ func ServerConfigFromEntry(entry RegistryEntry) *ServerConfig {
 // EntryYAML returns the YAML encoding of a RegistryEntry for use as a hash fallback.
 func EntryYAML(e RegistryEntry) ([]byte, error) {
 	return yaml.Marshal(e)
+}
+
+// ResolveProfile returns the sorted list of server names for a named profile.
+// Explicit servers: entries are validated; tag entries are expanded via FilterByTag.
+func (r *FleetRegistry) ResolveProfile(name string) ([]string, error) {
+	p, ok := r.Profiles[name]
+	if !ok {
+		return nil, fmt.Errorf("profile %q not found", name)
+	}
+	seen := map[string]bool{}
+	var result []string
+	for _, s := range p.Servers {
+		if _, ok := r.Servers[s]; !ok {
+			return nil, fmt.Errorf("profile %q references unknown server %q", name, s)
+		}
+		if !seen[s] {
+			seen[s] = true
+			result = append(result, s)
+		}
+	}
+	for _, t := range p.Tags {
+		for _, s := range r.FilterByTag(t) {
+			if !seen[s] {
+				seen[s] = true
+				result = append(result, s)
+			}
+		}
+	}
+	sort.Strings(result)
+	return result, nil
 }
 
 func (r *FleetRegistry) FilterByTag(tag string) []string {

@@ -17,6 +17,28 @@ description + rough shape.
 
 ## Backlog ideas (no prompt yet)
 
+- **Dynamic MCP gateway via `notifications/tools/list_changed`**
+  The MCP 2024-11-05 spec includes `notifications/tools/list_changed` — a server
+  can signal mid-session that its tool list changed; the client re-fetches and
+  future messages only carry the updated schema. If Claude Code handles this
+  notification, textserve could become a single registered gateway that starts
+  with 2 tools (`load_profile`, `list_profiles`), then expands on demand. Zero
+  token cost for unloaded servers; no session restart required.
+
+  **Unknowns requiring investigation:**
+  1. Does Claude Code actually handle `notifications/tools/list_changed`? Test
+     with a minimal Go MCP server that emits the notification after a tool call.
+  2. Does the system prompt reflect the *current* tool list or the *initial* one?
+     (i.e. does removing tools from the schema actually reduce tokens mid-session?)
+  3. If Claude Code doesn't handle it natively — explore internal API. Look at
+     `~/.claude/` internals, the MCP client source (Claude Code is Electron; devtools
+     may expose the IPC/WebSocket the frontend uses to communicate with the MCP
+     subprocess manager). A documented internal API path here could unlock dynamic
+     loading even before Anthropic ships it officially.
+
+  Investigation path: build a toy MCP server → test notification handling → if
+  blocked, crack open Claude Code devtools and map the internal MCP session API.
+
 - **CLAUDE_CONFIG_DIR awareness in mcpf**
   One-liner: `internal/claude/claude.go:configPath()` should read
   `$CLAUDE_CONFIG_DIR` before falling back to `~/.claude-work/.claude.json`.

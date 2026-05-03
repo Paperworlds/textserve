@@ -22,6 +22,32 @@ ideas:
       - supergateway: stdio↔SSE bridge, not a fleet aggregator
     key_decision: namespacing strategy (<server>__<tool> vs <server>/<tool>)
 
+  - id: dynamic-mcp-gateway
+    title: "textserve dynamic gateway — single MCP endpoint with on-demand tool loading"
+    status: investigation
+    summary: |
+      textserve registers as the single Claude MCP endpoint. It exposes two tools
+      at startup (load_profile, list_profiles). When load_profile is called, it
+      expands its tool list and emits notifications/tools/list_changed per the
+      MCP 2024-11-05 spec. Claude Code re-fetches; subsequent messages only carry
+      currently-loaded tools. Sessions start at near-zero MCP token cost.
+    investigation_required:
+      - Does Claude Code handle notifications/tools/list_changed? (test with toy server)
+      - Does the system prompt update mid-session or only at session start?
+      - If not natively supported: map Claude Code internal MCP session API via
+        Electron devtools / IPC inspection. Claude Code is Electron; the frontend
+        communicates with the MCP subprocess manager over an internal channel that
+        may be scriptable.
+    benefits:
+      - Eliminates the per-server per-message token tax for unloaded servers
+      - One entry in claude.json instead of N
+      - Session type determines active tool surface, not static registration
+    tradeoffs:
+      - Requires MCP protocol support (notifications/tools/list_changed) or internal API access
+      - More complex than profiles; profiles are the pragmatic fallback
+      - Internal API is undocumented and may change between Claude Code versions
+    depends_on: mcp-profiles
+
   - id: mcp-ify-closed-platforms
     title: "MCP bridge for closed platforms (Bloomberg, Figma, Linear, Notion)"
     status: idea
