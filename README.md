@@ -10,6 +10,51 @@ textserve status         # show all servers and their running state
 textserve start slack    # start a single server and register it with Claude
 ```
 
+## Session Profiles
+
+Every registered MCP server injects its tool descriptions into Claude's system prompt on every message — whether or not those tools are relevant to the session. Profiles let you declare which servers are active for a given context and converge the fleet in one command.
+
+```bash
+textserve profile list
+# PROFILE           SERVERS  DESCRIPTION
+# -------           -------  -----------
+# coding                  3  Code review and CI
+# data                    5  Data analysis and observability
+# comms                   2  Slack and notifications
+# minimal                 1  Knowledge graph only
+
+textserve profile use coding
+# jenkins   → already running
+# sentry    → started
+# textmap   → already running
+# grafana   → stopped
+# snowflake → stopped
+# slack     → stopped
+```
+
+Profiles are defined in `registry.yaml` alongside your servers. Each profile lists servers explicitly, by tag, or both:
+
+```yaml
+profiles:
+  coding:
+    description: "Code review and CI"
+    servers: [jenkins, sentry]   # explicit names
+    tags: [knowledge]            # expanded by tag
+
+  data:
+    description: "Data analysis and observability"
+    tags: [data, monitoring]     # all servers with these tags
+```
+
+`profile use` brings up servers in the profile that aren't running, and brings down servers that aren't in the profile. Already-running servers in the profile are skipped. The `--force` flag on individual `start` calls still works if you need to restart a specific server.
+
+If you use [textaccounts](https://github.com/paperworlds) to switch Claude Code profiles, textserve respects `$CLAUDE_CONFIG_DIR` automatically — so switching accounts and switching your MCP surface are coordinated:
+
+```bash
+textaccounts use work    # sets CLAUDE_CONFIG_DIR → ~/.claude-work
+textserve profile use coding   # registers to ~/.claude-work/.claude.json
+```
+
 ## CLI Reference
 
 | Command | Description |
@@ -18,6 +63,11 @@ textserve start slack    # start a single server and register it with Claude
 | `textserve start --tag <tag>` | Start all servers with a given tag |
 | `textserve stop <name>` | Stop a server and deregister it |
 | `textserve restart <name>` | Stop then start a server |
+| `textserve up [name\|--tag\|--all]` | Converge to running+registered (skip if already up) |
+| `textserve down [name\|--tag\|--all]` | Stop and deregister |
+| `textserve profile list` | List defined profiles |
+| `textserve profile show <name>` | Show resolved server list for a profile |
+| `textserve profile use <name>` | Converge fleet to a named profile |
 | `textserve logs <name> [-f]` | Show (or follow) container logs |
 | `textserve list [--tag <tag>]` | List all (or filtered) server names |
 | `textserve status` | Show all servers with running state and health |
