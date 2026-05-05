@@ -5,7 +5,7 @@
 complete -c textserve -f
 
 # Subcommands
-set -l subcommands start stop restart up down logs list status health doctor preflight add profile
+set -l subcommands start stop restart up down logs list status health doctor preflight add profile remove
 
 for sub in $subcommands
     complete -c textserve -n "__fish_use_subcommand $subcommands" -a $sub
@@ -55,6 +55,18 @@ for sub in show use
         -a "(textserve profile list 2>/dev/null | tail -n +3 | awk '{print \$1}')" \
         -d "profile"
 end
+
+# remove: server names + flags
+complete -c textserve -n "__fish_seen_subcommand_from remove" \
+    -a "(textserve list 2>/dev/null)" -d "MCP server"
+complete -c textserve -n "__fish_seen_subcommand_from remove" \
+    -l global -d "remove from global config"
+complete -c textserve -n "__fish_seen_subcommand_from remove" \
+    -l repo -d "path to project repo"
+complete -c textserve -n "__fish_seen_subcommand_from remove" \
+    -l all -d "remove from all config files"
+complete -c textserve -n "__fish_seen_subcommand_from remove" \
+    -l dry-run -d "preview without writing"
 
 # add flags
 complete -c textserve -n "__fish_seen_subcommand_from add" \

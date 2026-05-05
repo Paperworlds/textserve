@@ -67,6 +67,60 @@ type mcpEntry struct {
 	DisabledTools []string          `json:"disabledTools,omitempty"`
 }
 
+// RemoveFromFile removes the named server from mcpServers in an arbitrary Claude
+// JSON config file (global .claude.json or project .claude/settings.json).
+// Returns (true, nil) if the key was found and removed, (false, nil) if absent.
+// Writes atomically via a temp file so invalid JSON is never left behind.
+func RemoveFromFile(name, path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, fmt.Errorf("read %s: %w", path, err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return false, fmt.Errorf("parse %s: %w", path, err)
+	}
+	servers, _ := raw["mcpServers"].(map[string]any)
+	if servers == nil {
+		return false, nil
+	}
+	if _, ok := servers[name]; !ok {
+		return false, nil
+	}
+	delete(servers, name)
+	out, err := json.MarshalIndent(raw, "", "    ")
+	if err != nil {
+		return false, fmt.Errorf("marshal %s: %w", path, err)
+	}
+	out = append(out, '\n')
+	// Atomic write: temp file in same dir + rename.
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".claude-remove-*.json")
+	if err != nil {
+		return false, fmt.Errorf("create temp: %w", err)
+	}
+	tmpPath := tmp.Name()
+	if _, err := tmp.Write(out); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return false, fmt.Errorf("write temp: %w", err)
+	}
+	tmp.Close()
+	if err := os.Rename(tmpPath, path); err != nil {
+		os.Remove(tmpPath)
+		return false, fmt.Errorf("rename: %w", err)
+	}
+	return true, nil
+}
+
+// GlobalConfigPath returns the path to the user-scoped Claude config file.
+func GlobalConfigPath() string { return configPath() }
+
+// ProjectConfigPath returns the path to the project-scoped Claude config at dir.
+func ProjectConfigPath(dir string) string {
+	return filepath.Join(dir, ".claude", "settings.json")
+}
+
 // Deregister removes the server from the user-scoped Claude MCP config.
 func Deregister(name string, cfg *registry.ServerConfig) error {
 	if cfg.Runtime == "claude" {

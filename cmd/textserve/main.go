@@ -71,6 +71,7 @@ func buildRoot() *cobra.Command {
 		newUpCmd(),
 		newDownCmd(),
 		newProfileCmd(),
+		newRemoveCmd(),
 	)
 	return root
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.15
+
+- Add `textserve remove <name>` — remove an MCP server entry from a Claude config file
+- Flags: `--global` (default), `--repo <path>` (project `.claude/settings.json`), `--all`, `--dry-run`
+- Idempotent: exits 0 with a clear message when the entry is not found
+- Atomic write via temp file + rename — invalid JSON is never left behind
+
 ## v0.1.14
 
 - Add `textserve profile` command — `list`, `show`, and `use` subcommands
