@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.16
+
+- Add `--profile <name>` persistent flag — resolves a textaccounts profile to a `CLAUDE_CONFIG_DIR` path before any command runs
+- Reads `~/.textaccounts/profiles.yaml` directly (alias-aware); fails with a clear error if textaccounts is not configured or the profile is not found
+- Applies to all subcommands: `up`, `down`, `start`, `stop`, `register`, `deregister`, `profile use`, etc.
+
 ## v0.1.15
 
 - Add `textserve remove <name>` — remove an MCP server entry from a Claude config file

@@ -17,6 +17,7 @@ import (
 	"github.com/paperworlds/textserve/internal/native"
 	"github.com/paperworlds/textserve/internal/regcache"
 	"github.com/paperworlds/textserve/internal/registry"
+	"github.com/paperworlds/textserve/internal/textaccounts"
 )
 
 // version is set at build time via -ldflags, falls back to VERSION file.
@@ -46,13 +47,25 @@ func main() {
 }
 
 func buildRoot() *cobra.Command {
+	var profile string
 	root := &cobra.Command{
 		Use:   "textserve",
 		Short: "mcp-fleet management CLI",
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if profile == "" {
+				return nil
+			}
+			dir, err := textaccounts.ResolveProfile(profile)
+			if err != nil {
+				return err
+			}
+			return os.Setenv("CLAUDE_CONFIG_DIR", dir)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
 	}
+	root.PersistentFlags().StringVar(&profile, "profile", "", "textaccounts profile to target (sets CLAUDE_CONFIG_DIR)")
 	binPath, _ := os.Executable()
 	root.Version = fmt.Sprintf("%s (bin: %s)", resolveVersion(), binPath)
 	root.AddCommand(

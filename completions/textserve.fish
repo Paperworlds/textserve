@@ -68,6 +68,11 @@ complete -c textserve -n "__fish_seen_subcommand_from remove" \
 complete -c textserve -n "__fish_seen_subcommand_from remove" \
     -l dry-run -d "preview without writing"
 
+# --profile global flag (textaccounts integration)
+complete -c textserve -l profile \
+    -a "(textaccounts list 2>/dev/null | awk 'NR>1 {print $1}')" \
+    -d "textaccounts profile to target"
+
 # add flags
 complete -c textserve -n "__fish_seen_subcommand_from add" \
     -l transport -a "http native stdio" -d "transport type"
