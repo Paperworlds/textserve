@@ -17,7 +17,7 @@ servers:
       endpoint: /health
       timeout: 15
 
-profiles:
+bundles:
   minimal:
     description: "Knowledge graph only"
     servers: [textmap]

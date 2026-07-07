@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.10.2 — 2026-07-07
+
+- **Fix CI (red on main).** `go vet` failed on dead code: `cmd/textserve/profile.go` referenced `FleetRegistry.Profiles`, removed in the profiles→bundles rename. `newProfileCmd` was never wired into root (superseded by `bundle.go`), so removed `profile.go` + `profile_test.go`.
+- Repointed stale `internal/registry` tests to the current server set: `TestFilterByTag_Docker`→`_Gateway` (no docker-tagged server remains), `TestLoadServer_Jenkins`→`_ToolsAPI`, and dropped `TestLoadServer_Snowflake_Headers` (jenkins/snowflake fixtures were refactored into tools-api adapters).
+- Verified locally: `go vet ./...` clean, `go test ./...` green.
+- **Aligned release tags with the changelog** — tags were stranded at `v0.1.16` while the changelog had advanced to `v0.10.x`.
+- **Fixed stale server paths** — `servers/*/server.yaml` pointed at the removed monorepo checkout (`.../paperworlds/...`); repointed to the standalone repos (`${HOME}/projects/personal/...`).
+- **Scrubbed internal infra from the public repo** — `tools-api/server.yaml` no longer commits the internal Jenkins URL, work email, Sentry org, or Athena env/role overrides; real values move to `~/.local/paperworlds/textserve/local.yaml`.
+- **`registry.yaml`: legacy `profiles:` → `bundles:`** (drops the deprecation warning).
+
 ## v0.10.1
 
 - **Refactor: split `cmd/textserve-mcp/main.go` (485 lines) into per-surface files.** Pure intra-package code movement, no behavior change:

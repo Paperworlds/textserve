@@ -4,7 +4,7 @@ native_cmd: uv
 native_args:
   - run
   - --directory
-  - /Users/projects/personal/paperworlds/textserve/servers/gordon
+  - ${HOME}/projects/personal/textserve/servers/gordon
   - python
   - -m
   - gordon_mcp

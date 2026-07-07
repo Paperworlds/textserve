@@ -4,7 +4,7 @@ native_cmd: uv
 native_args:
   - run
   - --directory
-  - /Users/projects/personal/paperworlds/textmap
+  - ${HOME}/projects/personal/textmap
   - python
   - -m
   - textmap_mcp
