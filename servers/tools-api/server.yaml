@@ -1,0 +1,68 @@
+protocol: http
+runtime: process
+no_register: true
+port: 10893
+endpoint_path: /health
+pid_file: /tmp/.mcp-tools-api.pid
+native_cmd: uv
+native_venv: "${HOME}/projects/personal/paperworlds/textserve/servers/tools-api/.venv"
+native_args:
+  - run
+  - --directory
+  - "${HOME}/projects/personal/paperworlds/textserve/servers/tools-api"
+  - python
+  - server.py
+tags:
+  - gateway
+  - native
+env:
+  # Datadog
+  - name: DD_API_KEY
+    cache: "datadog/api-key"
+  - name: DD_APP_KEY
+    cache: "datadog/app-key"
+  - name: DD_SITE
+    value: "datadoghq.com"
+  - name: DD_CRED_TTL_HOURS
+    value: "4"
+  # Snowflake
+  - name: SNOWFLAKE_ACCOUNT
+    cache: "snowflake/account"
+  - name: SNOWFLAKE_USER
+    cache: "snowflake/user"
+  # Athena
+  - name: ATHENA_REGION
+    value: "ap-northeast-1"
+  - name: ATHENA_ROLE
+    value: "poweruser"
+  - name: ATHENA_ROLE_OVERRIDES
+    value: "paradigm-data=admin"
+  - name: ATHENA_REGION_OVERRIDES
+    value: "paradigm-dev=eu-west-2,paradigm-testnet=eu-west-2,paradigm-prod=eu-west-2,paradigm-data=us-east-1"
+  # PagerDuty
+  - name: PAGERDUTY_TOKEN
+    cache: "pagerduty/token"
+  - name: PAGERDUTY_CRED_TTL_HOURS
+    value: "4"
+  # Sentry
+  - name: SENTRY_TOKEN
+    cache: "sentry/token"
+  - name: SENTRY_ORG
+    value: "paradigmco"
+  - name: SENTRY_CRED_TTL_HOURS
+    value: "4"
+  # Jenkins
+  - name: JENKINS_URL
+    value: "https://jenky.dev.pdgm.io"
+  - name: JENKINS_USER
+    value: "paolo@paradigm.co"
+  - name: JENKINS_TOKEN
+    value: ""
+  - name: JENKINS_CRED_TTL_HOURS
+    value: "4"
+  # Gateway
+  - name: TOOLS_API_PORT
+    value: "10893"
+health:
+  endpoint: /health
+  timeout: 15

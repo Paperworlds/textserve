@@ -1,0 +1,166 @@
+specs:
+
+  - id: textserve-auth
+    title: "textserve-auth — session-aware request authorization for tools-api"
+    status: specced
+    priority: high
+
+    problem: |
+      tools-api (port 10893) is reachable by any local process with no identity or
+      access control. Any agent — or any tool call from any Claude session — can
+      invoke any adapter action including writes (jenkins trigger, etc.).
+      There is no way to restrict access per session, require approval for sensitive
+      actions, or audit which agent did what.
+
+    goals:
+      - Pre-configure access per named session (read-only, write, tool-scoped)
+      - Default: readonly for unknown sessions; blocked writes logged and user-visible
+      - Blocked requests carry actionable error messages the agent can relay to the user
+      - Session tokens expire after 30 min, forcing periodic re-validation against current policy
+      - Policy entries are permanent — they stay until the user explicitly changes auth.yaml
+      - All decisions logged to the activity log alongside existing invoke/refresh events
+
+    non_goals:
+      - Network-level auth (TLS, mTLS) — tools-api is localhost-only
+      - Multi-user or remote access — this is single-user local infra
+      - Queuing write requests for deferred approval — blocked means blocked (with a clear error)
+
+    design:
+
+      session_identity:
+        mechanism: X-Session request header on every POST /invoke call
+        format: arbitrary string — typically a meaningful name like "servant" or "data-analyst"
+        anonymous: requests with no X-Session header fall under the "default" policy
+        note: |
+          Identity is cooperative — the agent must include the header. This is
+          appropriate for trusted local agents (Claude Code sessions).
+
+      session_tokens:
+        purpose: |
+          Force periodic re-validation of policy. A token proves the session was
+          validated against the current auth.yaml within the last 30 minutes.
+          If auth.yaml changes (e.g. a session is removed or downgraded), the next
+          token refresh will pick up the new policy.
+        ttl: 30 minutes (not configurable in v1)
+        storage: in-memory dict {session_name → {token: UUID, expires_at: monotonic}}
+          Note: tokens are not persisted — a tools-api restart clears all tokens.
+          Agents must re-authenticate after restart (first invoke re-issues a token).
+        flow: |
+          First call (no token):
+            1. Agent calls POST /invoke {X-Session: servant} (no X-Session-Token header)
+            2. Policy check: session found in auth.yaml → allowed
+            3. Token issued: UUID stored in memory with 30 min TTL
+            4. Invoke executes normally
+            5. Response includes X-Session-Token header with the issued token
+            6. Agent stores token and sends it on all subsequent calls
+
+          Subsequent calls (valid token):
+            1. Agent calls POST /invoke {X-Session: servant, X-Session-Token: <token>}
+            2. Token validated: not expired, matches session name
+            3. Invoke executes — no policy re-check needed (token proves recent validation)
+
+          Token expired:
+            1. Agent calls with expired X-Session-Token
+            2. tools-api returns 401:
+               {"error": "session_token_expired", "session": "servant",
+                "message": "Session token expired. Call POST /auth/session/refresh to re-validate.",
+                "refresh_url": "/auth/session/refresh"}
+            3. Agent calls POST /auth/session/refresh {X-Session: servant}
+            4. Policy re-checked against current auth.yaml
+            5. New token issued and returned in response body + X-Session-Token header
+            6. Agent resumes
+
+          Missing token (after restart or first call):
+            Treated as first call — policy checked, new token issued.
+
+      policy_file:
+        path: "servers/tools-api/auth.yaml"
+        note: Policy entries are permanent — no expiry. Stay until user edits the file.
+        format: |
+          default: readonly        # policy for sessions not listed below
+                                   # values: readonly | readwrite | deny
+
+          sessions:
+            servant:               # matched against X-Session header value
+              allow: readwrite     # readonly | readwrite | deny
+              tools: ["*"]         # "*" = all adapters; or list e.g. [athena, datadog]
+
+            data-analyst:
+              allow: readonly
+              tools: [athena, datadog]
+
+            ci-agent:
+              allow: readwrite
+              tools: [jenkins]
+
+            # sessions not listed fall back to `default`
+
+        policy_values:
+          readonly: |
+            Read actions pass through. Write actions rejected with 403 + actionable message.
+          readwrite: |
+            All actions pass through immediately.
+          deny: |
+            All requests rejected with 403 + actionable message.
+
+      blocked_access:
+        on_403: |
+          Response body includes a human-readable message the agent can relay:
+          {
+            "error": "access_denied",
+            "session": "servant",
+            "tool": "jenkins",
+            "action": "trigger",
+            "required": "readwrite",
+            "message": "Session 'servant' does not have write access to jenkins.trigger. Ask the user to run: textserve auth allow tools-api servant jenkins readwrite"
+          }
+        logging: |
+          Every blocked attempt is logged to the activity log (same file as invokes):
+          {"ts": "...", "event": "access_denied", "session": "servant", "tool": "jenkins",
+           "action": "trigger", "required": "readwrite"}
+          `textserve auth pending` reads this log and surfaces recent blocked attempts.
+
+    api_changes:
+
+      new_endpoints:
+        - "POST /auth/session/refresh" — re-validate session against current policy; issue new token
+          body: {session: "servant"} (or reads X-Session header)
+          response: {token: "...", expires_in: 1800, session: "servant", allow: "readwrite", tools: [...]}
+
+      modified_endpoints:
+        - "POST /invoke" — reads X-Session + X-Session-Token headers; applies policy;
+          issues token on first call; returns X-Session-Token in response header
+
+      unchanged_endpoints:
+        - "POST /auth/{tool}/refresh"
+        - "POST /mode/{tool}"
+        - "POST /mode"
+        - "GET /health"
+        - "GET /permissions"
+        - "GET /describe"
+        - "POST /reload"
+
+    cli_changes:
+
+      new_commands:
+        - "textserve auth pending [server]" — show recent blocked access attempts from activity log
+        - "textserve auth allow <server> <session> <tool> readonly|readwrite" — add/update session policy in auth.yaml; hot-reloads immediately
+        - "textserve auth deny <server> <session>" — set session policy to deny in auth.yaml
+        - "textserve auth sessions [server]" — show full current policy from auth.yaml
+
+      note: |
+        `textserve auth allow` writes to auth.yaml atomically and triggers an in-process
+        policy reload so the change takes effect without restart.
+        `textserve auth pending` tails the activity log filtered to event=access_denied,
+        last 50 entries by default.
+
+    implementation_notes:
+      - auth.yaml loaded at startup alongside tools.yaml; hot-reloadable via POST /reload
+      - Policy check: (session, tool, action, adapter._readonly) → allow | deny
+        adapter._readonly (from POST /mode) takes precedence: if adapter is in readonly
+        mode, write actions are denied regardless of session policy
+      - Token store is in-memory: clears on restart; agents re-auth automatically on first call
+      - Tokens issued per session name — one active token per session at a time;
+        refresh replaces the previous token
+      - All events (allow, deny, token_issued, token_expired, token_refreshed) logged
+        to activity log with session field

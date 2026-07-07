@@ -1,0 +1,27 @@
+servers:
+  textmap:
+    protocol: stdio
+    runtime: claude
+    tags: [knowledge, memory, stdio]
+    deps: []
+    health:
+      probe: tool-list
+      timeout: 5
+
+  tools-api:
+    protocol: http
+    runtime: process
+    port: 10893
+    tags: [gateway, native]
+    health:
+      endpoint: /health
+      timeout: 15
+
+profiles:
+  minimal:
+    description: "Knowledge graph only"
+    servers: [textmap]
+
+  full:
+    description: "Full fleet via tools-api gateway"
+    servers: [textmap, tools-api]

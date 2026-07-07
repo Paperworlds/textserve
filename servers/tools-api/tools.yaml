@@ -1,0 +1,42 @@
+tools:
+  pagerduty:
+    adapter: pagerduty
+    readonly: true
+    params:
+      cred_ttl_hours: "${PAGERDUTY_CRED_TTL_HOURS}"
+
+  sentry:
+    adapter: sentry
+    readonly: true
+    params:
+      cred_ttl_hours: "${SENTRY_CRED_TTL_HOURS}"
+
+  jenkins:
+    adapter: jenkins
+    readonly: false
+    params:
+      cred_ttl_hours: "${JENKINS_CRED_TTL_HOURS}"
+
+  athena:
+    adapter: athena
+    readonly: true
+    params:
+      region: "${ATHENA_REGION}"
+      sso_profile: ""
+      role: "${ATHENA_ROLE}"
+      role_overrides: "${ATHENA_ROLE_OVERRIDES}"
+      region_overrides: "${ATHENA_REGION_OVERRIDES}"
+
+  datadog:
+    adapter: datadog
+    readonly: true
+    params:
+      site: "${DD_SITE}"
+      cred_ttl_hours: "${DD_CRED_TTL_HOURS}"
+
+  snowflake:
+    adapter: snowflake
+    readonly: true
+    readonly_exceptions:
+      - "NIGHTLY*"
+    params: {}

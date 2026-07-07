@@ -1,0 +1,90 @@
+ideas:
+
+  - id: mcp-proxy
+    title: "textserve proxy — single aggregating MCP endpoint"
+    status: idea
+    summary: |
+      A thin Go HTTP MCP server that reads registry.yaml, connects to all
+      running HTTP MCP servers, namespaces their tools (<server>__<tool>),
+      and exposes one endpoint (e.g. http://localhost:9900/mcp).
+      Claude registers only the proxy instead of N separate servers.
+    benefits:
+      - claude.json reduced from N entries to 1
+      - Cleaner /mcp panel
+      - textserve still manages the fleet; proxy is just the Claude-facing layer
+    tradeoffs:
+      - All tools visible upfront → larger context window hit
+      - Tool namespacing required to avoid collisions (snowflake__execute_query)
+      - Proxy must degrade gracefully when a backend server dies
+      - Extra hop latency
+    alternatives_considered:
+      - sparfenyuk/mcp-proxy: Python, stdio-only, doesn't read registry.yaml
+      - supergateway: stdio↔SSE bridge, not a fleet aggregator
+    key_decision: namespacing strategy (<server>__<tool> vs <server>/<tool>)
+
+  - id: dynamic-mcp-gateway
+    title: "textserve dynamic gateway — single MCP endpoint with on-demand tool loading"
+    status: investigation
+    summary: |
+      textserve registers as the single Claude MCP endpoint. It exposes two tools
+      at startup (load_profile, list_profiles). When load_profile is called, it
+      expands its tool list and emits notifications/tools/list_changed per the
+      MCP 2024-11-05 spec. Claude Code re-fetches; subsequent messages only carry
+      currently-loaded tools. Sessions start at near-zero MCP token cost.
+    investigation_required:
+      - Does Claude Code handle notifications/tools/list_changed? (test with toy server)
+      - Does the system prompt update mid-session or only at session start?
+      - If not natively supported: map Claude Code internal MCP session API via
+        Electron devtools / IPC inspection. Claude Code is Electron; the frontend
+        communicates with the MCP subprocess manager over an internal channel that
+        may be scriptable.
+    benefits:
+      - Eliminates the per-server per-message token tax for unloaded servers
+      - One entry in claude.json instead of N
+      - Session type determines active tool surface, not static registration
+    tradeoffs:
+      - Requires MCP protocol support (notifications/tools/list_changed) or internal API access
+      - More complex than profiles; profiles are the pragmatic fallback
+      - Internal API is undocumented and may change between Claude Code versions
+    depends_on: mcp-profiles
+
+  - id: athena-mcp
+    title: "Athena MCP as Grafana workaround for non-admin users"
+    status: idea
+    source: "2026-05-15 session — lost Grafana admin access; cannot mint service-account tokens"
+    summary: |
+      Grafana MCP (mcp/grafana) requires a service-account bearer token that
+      only an admin can create. When admin access is unavailable, an AWS Athena
+      MCP server querying the same underlying logs/metrics (CloudWatch exports,
+      S3 access logs) is a viable substitute for read-only observability.
+      Auth flows through AWS SSO (auth: aws), matching the airflow MCP pattern.
+    benefits:
+      - Works without Grafana admin — only needs AWS SSO PowerUser access
+      - Reuses existing aws auth machinery (see airflow server config)
+      - awslabs/mcp ships an Athena tool that could be wrapped directly
+    tradeoffs:
+      - Athena query latency vs Grafana's pre-indexed dashboards
+      - Requires logs/metrics to be exported to S3 — not 1:1 with Grafana data sources
+      - Query cost (Athena charges per TB scanned)
+    key_decision: wrap awslabs/mcp Athena tool vs build minimal custom server
+
+  - id: mcp-ify-closed-platforms
+    title: "MCP bridge for closed platforms (Bloomberg, Figma, Linear, Notion)"
+    status: idea
+    source: "textread digest 2026-04-27-2 — brainstorm item 3, inspired by claude_tradingview.pdf"
+    summary: |
+      The TradingView MCP connector works by reading DOM values and automating
+      UI actions — no public API required. The same pattern generalises to any
+      desktop or web app: inject a WebSocket bridge, expose primitives
+      (read, write, click, screenshot), register them as MCP tools for Claude.
+      Write a generalisable guide ("MCP-ifying a closed platform") and apply it
+      to at least one high-value target: Bloomberg Terminal, Figma, Linear, or Notion.
+    benefits:
+      - Unlocks Claude tool use against platforms with no official MCP support
+      - WebSocket bridge approach is reusable across targets
+      - Low protocol overhead — piggybacks on existing UI rather than requiring API access
+    tradeoffs:
+      - Brittle to UI changes (DOM selectors break on app updates)
+      - Desktop apps may need Electron/CDP hooks vs web apps using content scripts
+      - ToS risk on closed platforms (Bloomberg in particular)
+    key_decision: browser extension vs injected content script vs native app automation (Playwright/CDP)

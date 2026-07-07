@@ -1,0 +1,24 @@
+# {{.Name}}
+
+<!-- TODO: describe what this server does and what tools it exposes -->
+
+## Transport
+
+- **Transport:** {{.Transport}}
+- **Port:** {{.Port}}
+- **Endpoint:** http://localhost:{{.Port}}/mcp
+
+## Auth
+
+<!-- TODO: specify the 1Password item and fields used for credentials -->
+
+## Prerequisites
+
+<!-- TODO: list any deps or preconditions (VPN, port-forwards, etc.) -->
+
+## Usage
+
+```bash
+mcpf start {{.Name}}
+claude mcp add --transport http {{.Name}} http://localhost:{{.Port}}/mcp
+```

@@ -1,0 +1,208 @@
+# Smoke tests for textserve (MCP fleet) + textmap MCP server
+#
+# textserve is the MCP fleet manager (start/stop/health/register).
+# textmap is the knowledge-graph MCP server it manages.
+# graphk (predecessor) and mcpf (old fleet manager name) are retired.
+#
+# Run after: textserve binary update, graph.yaml edit, MEMORY.md change,
+# or Claude Code version bump (tool-call API may have changed).
+#
+# Owner: textserve. Adopts textworkspace/docs/specs/testing-yaml.md v0.1.0.
+
+version: 1
+
+smoke_tests:
+
+  - id: memory-stub-active
+    status: needs-testing
+    priority: p1
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      The 3-line MEMORY.md stub replaced the old eager-loading index. If the
+      file grows (accidental write, rollback to old backup), all memory files
+      load into context on session start — spiking tokens by ~77k. Must be
+      verified after any MEMORY.md edit or Claude session that might have
+      written to it.
+    run: |
+      cat ~/.claude-work/memory/MEMORY.md
+    verify:
+      - "file is exactly 3 lines (# Memory, blank, one paragraph)"
+      - "contains 'Context lives in the knowledge graph'"
+      - "no old memory section headers present (project, feedback, system, etc.)"
+    fails_when:
+      - "file was overwritten by a session that hadn't received the stub convention"
+      - "rollback restored the old full index from archive"
+    rollback: |
+      cp ~/.claude-work/memory/archive/MEMORY.md.bak ~/.claude-work/memory/MEMORY.md
+
+  - id: server-healthy
+    status: needs-testing
+    priority: p1
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      textserve manages the textmap MCP server lifecycle. A stale registration
+      or binary upgrade can leave the server unhealthy. Claude shows the server
+      as Connected only after a new session init — mid-session checks can miss
+      a restart-required state.
+    run: |
+      textserve health textmap
+      textserve status
+      claude mcp list
+    verify:
+      - "textserve health textmap shows: ✓ healthy (or equivalent green output)"
+      - "textserve status shows textmap as running"
+      - "claude mcp list shows textmap ✓ Connected"
+    fails_when:
+      - "binary updated but textserve not restarted (stale process)"
+      - "graph.yaml path changed in server config (server starts but returns empty results)"
+    recovery: |
+      textserve restart textmap
+      # Then open a NEW Claude session — MCP connects at init, not mid-session.
+
+  - id: graph-search-returns-edges
+    status: needs-testing
+    priority: p1
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      search() must return both nodes and edges keys. Missing edges means the
+      graph is unsynced — textmap sync wasn't re-run after a graph.yaml edit.
+      This is the most common post-edit failure mode.
+    setup:
+      - "open a new Claude session in any repo"
+    run: |
+      # Ask Claude: "What feedback do we have about Go testing?"
+      # Expected: search("go testing") → relevant feedback nodes
+      # Ask Claude: "What MCP tool should I use to query Snowflake?"
+      # Expected: search("query snowflake") → toolmap node + snowflake feedback
+    verify:
+      - "Claude calls search() (visible in tool use trace)"
+      - "response JSON contains both 'nodes' and 'edges' keys (not a flat list)"
+      - "results are topically correct (not hallucinated)"
+    fails_when:
+      - "edges key missing — re-run: textmap sync && textserve restart textmap"
+      - "Claude reads memory files directly instead of calling search() (stub wording drift)"
+
+  - id: graph-query-type-returns-edges
+    status: needs-testing
+    priority: p2
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      query_type() must include an edges key in its response. Breadth queries
+      are the most common Claude prompt; missing edges silently degrades answer
+      quality without any error signal.
+    setup:
+      - "open a new Claude session"
+    run: |
+      # Ask Claude: "What active projects do we have?"
+      # Expected: query_type("project") call
+    verify:
+      - "Claude calls query_type('project')"
+      - "response has at least 5 node results"
+      - "'edges' key present in the response (may be empty if nodes are unconnected)"
+    fails_when:
+      - "fewer than 5 project nodes (graph.yaml missing entries)"
+
+  - id: graph-query-node-depth
+    status: needs-testing
+    priority: p2
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      query_node(id, depth=1) must return the named node plus its direct
+      neighbors and edges. Broken depth traversal means Claude only sees nodes
+      in isolation — missing related feedback, blockers, decisions.
+    setup:
+      - "have a node ID from a previous search result (e.g. feedback-golang)"
+      - "open a new Claude session"
+    run: |
+      # Ask Claude: "Tell me more about feedback-golang and what it connects to."
+      # Expected: query_node("feedback-golang", depth=1)
+    verify:
+      - "Claude calls query_node with depth=1 (or equivalent)"
+      - "response includes the node itself plus at least one neighbor"
+      - "edges between node and neighbors are present"
+    fails_when:
+      - "depth param ignored — only root node returned (server regression)"
+
+  - id: graph-proactive-usage
+    status: needs-testing
+    priority: p2
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      The MEMORY.md stub instructs Claude to use graph tools proactively.
+      If Claude waits to be explicitly asked, the stub wording needs
+      strengthening. This tests the nudge effectiveness.
+    setup:
+      - "open a new Claude session in any repo"
+      - "do NOT mention graph tools in the prompt"
+    run: |
+      # Ask: "What are we currently working on?"
+      # Ask: "What system handles alert triage?"
+    verify:
+      - "Claude calls search() or query_type() without being asked"
+      - "tool call appears before the response body (not as a fallback)"
+    fails_when:
+      - "Claude answers from general knowledge without consulting the graph"
+      - "Claude asks 'should I check the graph?' instead of doing it"
+
+  - id: graph-no-match-fallback
+    status: needs-testing
+    priority: p3
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      When search finds nothing, Claude must say so rather than hallucinate.
+      A weak fallback instruction in the stub can cause confident wrong answers
+      about things not in the graph.
+    setup:
+      - "open a new Claude session"
+    run: |
+      # Ask about a very recent or obscure topic not in graph.yaml
+    verify:
+      - "Claude calls search() and reports no relevant results found"
+      - "Claude does not invent a plausible-sounding answer"
+    fails_when:
+      - "Claude confidently answers from training data, not the graph"
+
+  - id: db-sync-after-edit
+    status: needs-testing
+    priority: p1
+    created: "2026-04-13"
+    updated: "2026-05-04"
+    why: |
+      graph.yaml edits are not auto-synced to the Kuzu DB. Forgetting to run
+      textmap sync after an edit makes the textmap MCP server return stale data
+      silently — no error, just old results. textserve restart textmap is also
+      required so the running server picks up the refreshed DB.
+    setup:
+      - "make a small edit to graph.yaml (add a test node via textmap add)"
+    run: |
+      textmap add system smoke-sync-test -d "temporary node for sync smoke test"
+      textmap sync
+      textserve restart textmap
+      # In a new Claude session: search for the newly added node
+      textmap remove smoke-sync-test   # cleanup — or remove manually from graph.yaml
+      textmap sync
+      textserve restart textmap
+    verify:
+      - "textmap sync exits 0 with an updated node count"
+      - "new node appears in search results in the fresh Claude session"
+      - "textserve restart textmap completes without error"
+      - "after cleanup sync, node no longer appears in search"
+    fails_when:
+      - "new node not found even after sync + restart (sync logic broken)"
+      - "textmap sync errors on valid graph.yaml (schema validation regression)"
+      - "textserve restart textmap fails (process management regression)"
+
+# Cadence
+#
+# - After any textserve binary update: run server-healthy.
+# - After any graph.yaml edit: run db-sync-after-edit.
+# - After any MEMORY.md change: run memory-stub-active + graph-proactive-usage.
+# - After Claude Code version bump: run all smokes (tool call API may have changed).
+# - After textmap version bump: run db-sync-after-edit + graph-search-returns-edges.

@@ -1,0 +1,9 @@
+bin/mcpf
+mcpf
+logs/
+reports/
+**/__pycache__/
+*.pyc
+# server.local.yaml — local overrides (op paths, personal env); never commit
+servers/*/server.local.yaml
+.memsearch/

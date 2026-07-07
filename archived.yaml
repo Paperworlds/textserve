@@ -1,0 +1,3 @@
+# Archived servers — not loaded by the CLI.
+# Restore by moving entries back to registry.yaml.
+servers: {}
