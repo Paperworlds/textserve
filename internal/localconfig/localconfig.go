@@ -19,14 +19,14 @@ func Path() string {
 
 // ServerOverride holds per-server local overrides.
 type ServerOverride struct {
-	// Env maps env var name to a 1Password reference path (resolved by textserve at startup).
-	// Example: MY_TOKEN: "op://Vault/Item/field"
+	// Env maps env var name to an op:// reference path (resolved by textserve at startup).
+	// Example: DD_API_KEY: "op://Paradigm/Datadog API/api-key"
 	Env map[string]string `yaml:"env"`
 
 	// LiteralEnv maps env var name to a literal string value passed through as-is,
-	// without 1Password resolution. Use for values that the server itself needs to pass
+	// without op:// resolution. Use for values that the server itself needs to pass
 	// to op read (e.g. source paths for credential refresh).
-	// Example: MY_TOKEN_SOURCE: "op://Vault/Item/field"
+	// Example: DD_API_KEY_SOURCE: "op://Paradigm/Datadog API/api-key"
 	LiteralEnv map[string]string `yaml:"literal_env"`
 }
 

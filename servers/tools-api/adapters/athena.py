@@ -151,6 +151,23 @@ class AthenaAdapter:
         if not env:
             raise ValueError("environment is required")
 
+        # Fail loud on typo'd/unknown params. Without this the filters
+        # below silently no-op (e.g. `service`/`query`/`hours` instead of
+        # `app_name`/`search_pattern`/`hours_ago`) and the caller gets an
+        # env-wide dump that looks like a successful targeted query.
+        allowed_params = {
+            "query_logs": {"environment", "app_name", "search_pattern",
+                           "k8s_env", "hours_ago", "limit"},
+            "raw_query": {"environment", "sql", "workgroup", "output_location"},
+        }
+        if action in allowed_params:
+            unknown = set(params) - allowed_params[action]
+            if unknown:
+                raise ValueError(
+                    f"unknown param(s) for {action}: {', '.join(sorted(unknown))}; "
+                    f"allowed: {', '.join(sorted(allowed_params[action]))}"
+                )
+
         if action == "query_logs":
             app_name = params.get("app_name", "")
             pattern = params.get("search_pattern", "")
@@ -176,6 +193,7 @@ class AthenaAdapter:
                 f"SELECT timestamp, message, meta_app_name, meta_pod_name "
                 f"FROM {db}.{tbl} "
                 f"WHERE {' AND '.join(filters)} "
+                f"ORDER BY timestamp DESC "
                 f"LIMIT {limit}"
             )
             return self._run_query(action, env, sql)
@@ -191,13 +209,28 @@ class AthenaAdapter:
         else:
             raise NotImplementedError(f"unknown action: {action}")
 
+    _LOGIN_MAX_ATTEMPTS = 3
+    _LOGIN_TIMEOUT_S = 120
+
     def refresh(self) -> None:
         cmd = ["aws", "sso", "login"]
         if self._sso_profile:
             cmd += ["--profile", self._sso_profile]
-        subprocess.run(cmd, check=True)
-        with self._init_lock:
-            self._initialized = True
+        # `aws sso login` blocks on an interactive browser device flow, so a
+        # bare run() can hang forever. Bound each attempt with a timeout and
+        # give up after 3 tries instead of wedging the gateway.
+        last_err: Exception | None = None
+        for attempt in range(1, self._LOGIN_MAX_ATTEMPTS + 1):
+            try:
+                subprocess.run(cmd, check=True, timeout=self._LOGIN_TIMEOUT_S)
+                with self._init_lock:
+                    self._initialized = True
+                return
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+                last_err = exc
+        raise RuntimeError(
+            f"aws sso login failed after {self._LOGIN_MAX_ATTEMPTS} attempts: {last_err}"
+        )
 
     def health(self) -> dict:
         if not self._initialized:

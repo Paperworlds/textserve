@@ -1,0 +1,77 @@
+title: Refactor — split textserve-mcp main.go; document load-bearing complexity
+date: '2026-05-28'
+status: shipped
+shipped_in: v0.10.1
+source_task: post-prod refactor pass (task #44)
+motivation: >
+  main.go had grown to 485 lines as the catch-all for every meta-tool
+  definition. Now that the textserve-mcp arc has shipped and been exercised,
+  split it into focused per-surface files. Investigation of the other three
+  task-44 items showed they were based on assumptions that don't hold — see
+  rejected_items. Net effect: a small maintainability refactor, no behavior
+  change.
+
+investigation_findings:
+  split_main:
+    verdict: do it
+    detail: >
+      main.go mixes wiring (main, registerMetaTools), two bundles meta-tools,
+      three textmap meta-tools, and repo-root helpers. Clean seams exist.
+
+rejected_items:
+  drop_proxyResult_wrapping:
+    verdict: keep
+    reason: >
+      proxyResult/ProxyResult is not only a workaround for Claude Code's
+      v0.7.3 empty-outputSchema rejection. It wraps genuinely-untyped
+      proxied textmap output (search hits, node graphs) into a typed
+      string field. Even with the client bug fixed, you cannot emit a
+      structured outputSchema for a shape you don't model in Go. Keep;
+      add a comment noting the dual purpose.
+  lock_extractNodes_shape:
+    verdict: keep
+    reason: >
+      The string branch in extractNodes is a live safety net:
+      StdioBackend.CallTool falls back to concatenated TextContent when an
+      upstream returns no StructuredContent. Removing it trades 4 lines
+      for fragility against any textmap tool that returns text.
+  consolidate_findRepoRoot:
+    verdict: keep all three paths
+    reason: >
+      Premise ("find which fires in prod, drop the rest") was wrong — all
+      three serve distinct contexts, verified empirically on 2026-05-28:
+        1. TEXTSERVE_ROOT env      → tests
+        2. walk-up-from-exe        → `go run` / direct bin/ invocation (dev)
+        3. config.yaml root: field → installed symlink (prod)
+      Confirmed prod uses path 3: ran ~/.local/bin/textserve-mcp from
+      cwd=/tmp with no env; bundles.list returned 3 bundles. macOS
+      os.Executable() returns the symlink path (~/.local/bin/...), whose
+      ancestors hold no registry.yaml, so path 2 misses and path 3
+      (config.yaml `root:`) resolves. Dropping any breaks a real context.
+      Add a comment naming which path serves what.
+
+plan:
+  - step: split main.go
+    into:
+      main.go: package doc, vars/consts, main(), registerMetaTools(), loadRegistry(), findRepoRoot()
+      textmap.go: ProxyResult, proxyResult(), textmap.search, textmap.propose, textmap.detail
+      bundles_meta.go: bundles.list (+types), bundles.toggle (+types)
+    note: >
+      registerMetaTools stays in main.go — it is the wiring hub that
+      references every handler. init_session.go, examples.go, bundles.go
+      already hold their surfaces. Pure code movement within package main;
+      no signatures change, so main_test.go needs no edits.
+  - step: add clarifying comments
+    where:
+      - findRepoRoot — three-path rationale (tests / dev / prod-symlink)
+      - proxyResult — dual purpose (client-bug workaround + untyped proxy output)
+  - step: verify
+    checks:
+      - go build ./...
+      - go test ./... (84 tests green)
+      - smoke: installed binary lists 7 meta-tools
+  - step: ship
+    detail: bump VERSION to v0.10.1; textserve + root CHANGELOG; GPG-signed commit
+
+risk: low
+rationale: pure intra-package code movement plus comments; compiler + test suite catch any miss.

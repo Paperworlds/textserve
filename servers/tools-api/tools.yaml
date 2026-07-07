@@ -17,15 +17,18 @@ tools:
     params:
       cred_ttl_hours: "${JENKINS_CRED_TTL_HOURS}"
 
-  athena:
-    adapter: athena
-    readonly: true
-    params:
-      region: "${ATHENA_REGION}"
-      sso_profile: ""
-      role: "${ATHENA_ROLE}"
-      role_overrides: "${ATHENA_ROLE_OVERRIDES}"
-      region_overrides: "${ATHENA_REGION_OVERRIDES}"
+  # athena — DISABLED 2026-07-07: left paradigm; the AWS SSO profiles no
+  # longer resolve, so refresh() would hang on `aws sso login` forever.
+  # Re-add this block to re-enable.
+  # athena:
+  #   adapter: athena
+  #   readonly: true
+  #   params:
+  #     region: "${ATHENA_REGION}"
+  #     sso_profile: ""
+  #     role: "${ATHENA_ROLE}"
+  #     role_overrides: "${ATHENA_ROLE_OVERRIDES}"
+  #     region_overrides: "${ATHENA_REGION_OVERRIDES}"
 
   datadog:
     adapter: datadog
@@ -34,9 +37,12 @@ tools:
       site: "${DD_SITE}"
       cred_ttl_hours: "${DD_CRED_TTL_HOURS}"
 
-  snowflake:
-    adapter: snowflake
-    readonly: true
-    readonly_exceptions:
-      - "NIGHTLY*"
-    params: {}
+  # snowflake — DISABLED 2026-07-07: left paradigm; uses Okta
+  # externalbrowser auth (snowflake.py) which pops a login prompt on connect.
+  # Re-add this block to re-enable.
+  # snowflake:
+  #   adapter: snowflake
+  #   readonly: true
+  #   readonly_exceptions:
+  #     - "NIGHTLY*"
+  #   params: {}

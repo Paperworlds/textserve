@@ -1,59 +1,69 @@
 # textserve
 
-textserve is a local fleet manager for MCP (Model Context Protocol) servers. It provides a single CLI (`textserve`) to start, stop, and monitor a collection of Docker-based and native MCP servers, injecting credentials from 1Password at runtime and registering them with Claude Code automatically.
+textserve is a local fleet manager for MCP (Model Context Protocol) servers, plus a single MCP entry-point (`textserve-mcp`) that multiplexes the whole fleet behind one stdio connection. It runs Docker-based and native MCP servers, injects 1Password credentials at runtime, and exposes a curated meta-tool surface to Claude with the rest of the fleet dark until a human approves a bundle.
+
+Two binaries ship from this module:
+
+- `textserve` — orchestrator CLI (start/stop/status/bundle/toggle-inbox/doctor)
+- `textserve-mcp` — single MCP server registered in Claude; speaks stdio, dispatches to fleet backends
 
 ## Quick Start
 
 ```bash
-just install        # build binary + install to ~/.local/bin/textserve
-textserve status         # show all servers and their running state
-textserve start slack    # start a single server and register it with Claude
+just install                 # build both binaries → ~/.local/bin/{textserve,textserve-mcp}
+textserve status             # show all servers and their running state
+textserve start slack        # start a single server and register it with Claude
+textserve bundle list        # show togglable bundles and their enabled state
 ```
 
-## Session Profiles
+## textserve-mcp — single MCP surface
 
-Every registered MCP server injects its tool descriptions into Claude's system prompt on every message — whether or not those tools are relevant to the session. Profiles let you declare which servers are active for a given context and converge the fleet in one command.
+`textserve-mcp` is the only MCP entry registered in `~/.claude.json`. Claude sees seven always-on meta-tools; every other tool is dark until a human approves a bundle.
+
+| Meta-tool | Role |
+|---|---|
+| `bundles.list` | List bundles with their effective enabled state (overlay > registry default). |
+| `bundles.toggle` | Request enable/disable of a bundle. Writes to `~/.local/textserve/toggle-inbox/` and returns a `request_id` + `inbox_path`. Human approves out-of-band. |
+| `bundles.example` | Get example usage for a tool from textforums threads (`$TEXTFORUMS_ROOT`, default `~/.local/paperworlds/textforums`). |
+| `textmap.search` | Keyword search across the textmap knowledge graph. |
+| `textmap.propose` | Propose a new node — writes to the textmap inbox for human review. |
+| `textmap.detail` | Multiplexed read: `expand`, `list_labels`, `query_node`, `query_relation`, `query_type`, `query_why`. |
+| `textmap.init_session` | Bootstrap context: workspaces, active intents, open problems, active goals, recent decisions. Optional `query` adds search hits. |
+
+### Toggle flow
 
 ```bash
-textserve profile list
-# PROFILE           SERVERS  DESCRIPTION
-# -------           -------  -----------
-# coding                  3  Code review and CI
-# data                    5  Data analysis and observability
-# comms                   2  Slack and notifications
-# minimal                 1  Knowledge graph only
-
-textserve profile use coding
-# jenkins   → already running
-# sentry    → started
-# textmap   → already running
-# grafana   → stopped
-# snowflake → stopped
-# slack     → stopped
+# model calls bundles.toggle({bundle: "data", enable: true})  →  request queued
+textserve toggle-inbox list             # see what's pending
+textserve toggle-inbox approve <id>     # apply the overlay
 ```
 
-Profiles are defined in `registry.yaml` alongside your servers. Each profile lists servers explicitly, by tag, or both:
+The running `textserve-mcp` watches `~/.local/textserve/bundles.yaml` (2s mtime poll) and reconciles on change — newly-enabled servers' tools appear in Claude via `notifications/tools/list_changed` without reconnecting. Disabled bundles' tools are removed the same way.
+
+Bundle-owned tools are prefixed: `<server>.<upstream>` (e.g. `jenkins.list_builds`). Upstream input schemas pass through verbatim.
+
+## Bundles
+
+A bundle is a named set of MCP servers that toggle as a unit. Defined in `registry.yaml`:
 
 ```yaml
-profiles:
+bundles:
   coding:
     description: "Code review and CI"
-    servers: [jenkins, sentry]   # explicit names
-    tags: [knowledge]            # expanded by tag
+    servers: [jenkins, sentry]
 
   data:
     description: "Data analysis and observability"
-    tags: [data, monitoring]     # all servers with these tags
+    tags: [data, monitoring]
 ```
-
-`profile use` brings up servers in the profile that aren't running, and brings down servers that aren't in the profile. Already-running servers in the profile are skipped. The `--force` flag on individual `start` calls still works if you need to restart a specific server.
-
-If you use [textaccounts](https://github.com/paperworlds) to switch Claude Code profiles, textserve respects `$CLAUDE_CONFIG_DIR` automatically — so switching accounts and switching your MCP surface are coordinated:
 
 ```bash
-textaccounts use work    # sets CLAUDE_CONFIG_DIR → ~/.claude-work
-textserve profile use coding   # registers to ~/.claude-work/.claude.json
+textserve bundle list
+textserve bundle show coding
+textserve bundle use coding   # converge the docker/process fleet to this bundle
 ```
+
+`bundle use` is orchestrator-side (start/stop containers). The MCP-tool gating is independent and lives in the toggle inbox + overlay. The `profile` subcommand alias still works for muscle memory.
 
 ## CLI Reference
 
@@ -65,9 +75,12 @@ textserve profile use coding   # registers to ~/.claude-work/.claude.json
 | `textserve restart <name>` | Stop then start a server |
 | `textserve up [name\|--tag\|--all]` | Converge to running+registered (skip if already up) |
 | `textserve down [name\|--tag\|--all]` | Stop and deregister |
-| `textserve profile list` | List defined profiles |
-| `textserve profile show <name>` | Show resolved server list for a profile |
-| `textserve profile use <name>` | Converge fleet to a named profile |
+| `textserve bundle list` | List defined bundles with ENABLED column |
+| `textserve bundle show <name>` | Show resolved server list for a bundle |
+| `textserve bundle use <name>` | Converge fleet to a named bundle |
+| `textserve toggle-inbox list [--all]` | List pending (or all) bundle toggle requests |
+| `textserve toggle-inbox approve <id>` | Apply a toggle to the overlay |
+| `textserve toggle-inbox deny <id> [reason]` | Reject a pending toggle |
 | `textserve logs <name> [-f]` | Show (or follow) container logs |
 | `textserve list [--tag <tag>]` | List all (or filtered) server names |
 | `textserve status` | Show all servers with running state and health |
@@ -75,7 +88,6 @@ textserve profile use coding   # registers to ~/.claude-work/.claude.json
 | `textserve preflight --tags t1,t2 [--json]` | Check readiness of tagged servers |
 | `textserve add <name> --transport http --image img` | Scaffold a new server entry |
 | `textserve mode <server> <tool> readonly\|readwrite` | Flip a live adapter's write access (resets on restart) |
-| `textserve mode <server> --all readonly\|readwrite` | Flip all adapters in a server at once |
 | `textserve doctor` | Full diagnostic: registry, configs, deps, port conflicts |
 
 ## Registry Schema
@@ -86,22 +98,26 @@ textserve profile use coding   # registers to ~/.claude-work/.claude.json
 servers:
   myserver:
     image: "my-docker-image"       # Docker image (omit for native/stdio)
-    transport: http                 # http | native | stdio
-    port: 9887                      # host port
-    container_port: 9887            # port inside container
-    endpoint_path: /mcp             # Claude registration URL path
-    tags: [ci, docker]              # arbitrary tags for filtering
-    deps: []                        # prerequisite checks (cmd + hint)
+    protocol: http                 # http | stdio
+    runtime: docker                # docker | process | claude
+    port: 9887                     # host port
+    container_port: 9887           # port inside container
+    endpoint_path: /mcp            # HTTP MCP endpoint path
+    tags: [ci, docker]             # arbitrary tags for filtering
+    deps: []                       # prerequisite checks (cmd + hint)
     health:
-      endpoint: /health             # HTTP health endpoint
-      timeout: 5                    # probe timeout (seconds)
+      endpoint: /health            # HTTP health endpoint
+      timeout: 5                   # probe timeout (seconds)
 ```
 
-Full per-server configuration lives in `servers/<name>/server.yaml` and supports `env`, `volumes`, `extra_args`, `pre_start`, and more. See an existing server for examples.
+`runtime` controls how textserve-mcp reaches the upstream:
+- `docker` → speaks MCP streamable-HTTP at `http://localhost:<port><endpoint_path>`
+- `process` → speaks the tools-api gateway's `/describe` + `/invoke` REST
+- `claude` → spawns a stdio child via `native_cmd` from the server's `server.yaml`
+
+Full per-server configuration lives in `servers/<name>/server.yaml` and supports `env`, `volumes`, `extra_args`, `pre_start`, `native_cmd`, and more. See an existing server for examples.
 
 ## Adding a New Server
-
-Use `textserve add` to scaffold the directory, server.yaml, hook.sh, and README.md:
 
 ```bash
 textserve add myserver --transport http --port 9899 --image my-image --tags ci,docker
@@ -127,15 +143,16 @@ For MCP servers managed by Docker, restart picks up fresh credentials:
 textserve restart <name>
 ```
 
-## Migration
+## State Files
 
-The following files from the pre-fleet era are safe to remove after a 2-week shim period (approximately 2026-04-22):
+| Path | Owner | Purpose |
+|---|---|---|
+| `~/.local/textserve/bundles.yaml` | `toggle-inbox approve` | Overlay state — which bundles are effectively enabled |
+| `~/.local/textserve/toggle-inbox/<id>.yaml` | `bundles.toggle` meta-tool | Pending requests awaiting human approval |
+| `~/.local/log/textserve-toggle.log` | both | Append-only JSON-line audit (override via `$TEXTSERVE_LOG_PATH`) |
+| `~/.cache/textserve/<name>.log` | server start | Per-server runtime logs |
 
-- `~/projects/personal/skills/locals/mcp-hooks/*.sh` — all 12 per-server credential hooks
-- `~/projects/personal/skills/locals/bin/mcp-<name>` — all 12 wrapper scripts
-- `~/.config/mcp-servers.conf` — replaced by `registry.yaml`
-
-Do **not** remove these until you have verified that `textserve` handles all servers correctly in your workflow.
+Override state location with `$TEXTSERVE_STATE_DIR`; the textforums root for `bundles.example` with `$TEXTFORUMS_ROOT`.
 
 ## Part of Paperworlds
 

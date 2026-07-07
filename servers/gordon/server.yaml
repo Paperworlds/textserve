@@ -1,0 +1,16 @@
+protocol: stdio
+runtime: claude
+native_cmd: uv
+native_args:
+  - run
+  - --directory
+  - /Users/projects/personal/paperworlds/textserve/servers/gordon
+  - python
+  - -m
+  - gordon_mcp
+tags:
+  - docker
+  - cli
+health:
+  probe: tool-list
+  timeout: 10

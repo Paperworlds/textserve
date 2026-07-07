@@ -1,0 +1,306 @@
+version: 1
+description: |
+  Detailed plans for textserve features that need a written design before
+  implementation. Each plan should be specific enough that a future session
+  can pick it up cold and ship it without re-deriving the design.
+
+plans:
+  - id: textserve-bundles
+    title: Single MCP surface with togglable bundles
+    status: shipped
+    completed_at: '2026-05-27'
+    completed_in: textserve v0.5.0 → v0.10.0
+    priority: high
+    source:
+      - /Users/projects/personal/paperworlds/docs/textserve-bundles.yaml
+    motivation: |
+      Anticipate MCP 2026-07-28 (stateless, ttlMs, list_changed) and
+      Anthropic's knowledge-work-plugins direction by collapsing all
+      paperworlds MCP tools behind a single textserve endpoint. The model
+      sees one server with a small always-on meta-tool surface; everything
+      else is dark until the human approves a bundle toggle. Trust seams
+      stay file-visible (toggle inbox, tailable logs, textforums threads) —
+      the same idiom textmap.propose and memory files already use.
+
+      Full design locked in docs/textserve-bundles.yaml at monorepo root.
+      This plan is the execution arc.
+
+    architecture: |
+      claude ─MCP/stdio─→ textserve-mcp (new Go binary)
+                              │
+                              ├─ HTTP   → tools-api adapters (existing FastAPI :10893)
+                              └─ stdio  → textmap-mcp child   (existing Python)
+
+      The existing `textserve` Go CLI stays as the orchestrator / health /
+      bundle manager. `textserve-mcp` is a sibling binary built from the
+      same Go module.
+
+    deltas:
+      - id: registry-restructure
+        title: Rename profiles → bundles, add enabled axis
+        status: done
+        landed_in: textserve v0.5.0 (commit ac7741a)
+        real_world_tests: |
+          - `textserve bundle list` — shows 4 bundles with ENABLED column;
+            only `minimal` reads yes
+          - `textserve profile list` — alias works; same output as bundle list
+          - `textserve bundle show minimal` — prints resolved server list
+            (just `textmap`)
+          - `textserve bundle use minimal` — DANGER, real side effect:
+            stops every other server and registers only textmap with
+            Claude. Use only when you actually want to converge the fleet.
+          - Legacy `profiles:` key — hand-craft a registry.yaml with
+            `profiles:` instead of `bundles:`, point textserve at it,
+            confirm a one-line stderr deprecation warning and that
+            resolution still works.
+        risk: low
+        why: |
+          Pure refactor. Renames the conceptual unit from "profile" (a
+          session preset) to "bundle" (a togglable capability set,
+          matching knowledge-work-plugins terminology). Adds the
+          `enabled:` per-bundle axis that later spikes flip at runtime.
+          Lands first so every later spike speaks the new vocabulary.
+        deliverables:
+          - Rename type `registry.ProfileEntry` → `registry.BundleEntry`
+            in internal/registry/registry.go; add `Enabled bool` field.
+          - Rename `FleetRegistry.Profiles` → `FleetRegistry.Bundles`
+            (yaml tag `bundles`).
+          - Rename method `ResolveProfile(name)` → `ResolveBundle(name)`.
+          - Backwards-compat shim — if registry.yaml has no `bundles:`
+            key but does have legacy `profiles:`, unmarshal it into
+            `Bundles` and emit a one-line stderr deprecation warning.
+          - In registry.yaml — rename `profiles:` block to `bundles:`;
+            add `enabled: true` to the `minimal`/`textmap` bundle only.
+          - Rename cmd/textserve/profile.go → bundle.go; rename Cobra
+            command `profile` → `bundle`; keep `profile` as a hidden
+            alias for one release.
+          - Subcommands `list`, `show`, `use` keep their names. `list`
+            output gains an ENABLED column.
+          - Update all call sites: add.go, remove.go, status.go,
+            updown.go, doctor.go, main.go — grep for Profiles /
+            ResolveProfile / ProfileEntry and triage.
+          - Bump VERSION; update textserve/CHANGELOG.md and root
+            CHANGELOG.md ([textserve] prefix).
+        verification:
+          - go build ./... compiles cleanly
+          - go test ./... full suite green
+          - `textserve bundle list` shows ENABLED column; only the
+            minimal/textmap bundle reads `yes`
+          - `textserve profile list` still works (alias)
+          - Legacy `profiles:` registry.yaml loads with deprecation
+            warning, resolution still works
+        depends_on: []
+        unblocks: [meta-tools-and-inbox, textserve-mcp-binary]
+
+      - id: meta-tools-and-inbox
+        title: Bundle meta-tools + file-based toggle inbox
+        status: shipped
+        landed_in: |
+          inbox + overlay in textserve v0.6.0;
+          MCP meta-tools in v0.7.0 (binary, 6 tools);
+          textmap.detail added v0.7.4 (7th meta-tool);
+          bundles.toggle read-back + inbox_path in v0.9.2
+        scope_delta: |
+          The "MCP meta-tools" half of this delta is intentionally NOT
+          done here — it moved into the textserve-mcp-binary spike (#3)
+          because the tools have no host to live in yet. What landed is
+          the file-based human-approval seam those tools will write into.
+          Originally-planned tools-api HTTP endpoints (POST /bundles/toggle,
+          GET /bundles) were also dropped — spike #3's Go MCP server will
+          call the Go packages directly, no HTTP hop needed.
+        decisions_locked: |
+          - Toggle semantics: FIRE-AND-FORGET. Request() returns a
+            pending entry immediately; humans resolve out-of-band via
+            CLI. (Resolves the open_questions item in the original plan.)
+          - State location: per-host overlay at
+            $TEXTSERVE_STATE_DIR/bundles.yaml (default ~/.local/textserve/),
+            NOT a rewrite of the committed registry.yaml. Effective enabled
+            state = overlay if present, else registry default.
+          - Audit log: $TEXTSERVE_LOG_PATH (default
+            ~/.local/log/textserve-toggle.log), JSON lines, append-only.
+        delivered:
+          - internal/togglestate/ — overlay file management; Effective(name, default)
+          - internal/toggleinbox/ — file queue + JSON-line audit log;
+            Request / Get / List / Approve / Deny
+          - CLI: `textserve toggle-inbox {list, approve, deny, request}`
+          - `bundle list` ENABLED column shows effective state with `*`
+            marker when overlay overrides registry
+          - `bundle show` reports `[enabled|disabled via overlay|registry]`
+          - 10 new unit tests across the two packages; full suite green
+        real_world_tests: |
+          2-minute end-to-end exercise (works today, without Claude):
+
+            # window 1 — tail the audit log live
+            tail -f ~/.local/log/textserve-toggle.log
+
+            # window 2 — drive the flow
+            textserve bundle list                        # snapshot
+            textserve toggle-inbox request coding enable
+            textserve toggle-inbox request minimal disable
+            textserve toggle-inbox list                  # see pending
+            textserve toggle-inbox approve <id1>         # coding ON
+            textserve toggle-inbox deny <id2> --reason "keep textmap on"
+            cat ~/.local/textserve/bundles.yaml          # overlay file
+            textserve bundle list                        # coding=yes*, minimal=yes
+            textserve toggle-inbox list --all            # full history
+
+          This exercises: queue creation, audit log streaming, overlay
+          precedence, the `*` override marker, deny-doesn't-mutate guarantee.
+
+          Use a throwaway state dir to avoid touching real state:
+            export TEXTSERVE_STATE_DIR=$(mktemp -d)
+            export TEXTSERVE_LOG_PATH=$TEXTSERVE_STATE_DIR/toggle.log
+
+          NOT YET TESTABLE (waits on spike #3):
+          - Claude calling bundles.toggle on its own (no MCP surface yet)
+          - Tool gating based on overlay state (overlay exists but
+            nothing reads it for MCP listing)
+        risk: medium
+        why: |
+          Stands up the human-approval seam before any MCP code is
+          written. Toggles route through a YAML inbox + tailable JSON
+          log, mirroring textmap.propose → inventory/inbox. After this
+          lands, a human can already approve/deny bundle changes via
+          CLI; spike #3 adds the MCP surface that calls into it.
+        deliverables:
+          - File queue at ~/.local/textserve/toggle-inbox/<ts>-<bundle>-<action>.yaml
+          - Append-only audit log at ~/.local/log/textserve-toggle.log
+            (JSON lines, mirroring tools-api.log shape in
+            servers/tools-api/server.py)
+          - New Cobra subcommand `textserve toggle-inbox {list,approve,deny}`,
+            sibling of `bundle`
+          - tools-api gains HTTP endpoints `POST /bundles/toggle` (queue
+            a request) and `GET /bundles` (current enabled state) —
+            intermediate; spike #3 reads them
+          - On approve: flip per-bundle `_enabled` axis in tools-api;
+            append result line to log
+        verification:
+          - `textserve toggle-inbox list` shows pending toggles after a
+            POST to /bundles/toggle
+          - `textserve toggle-inbox approve <id>` flips state; tail of
+            textserve-toggle.log shows enable/approve/result lines
+          - tools-api `/describe` output filters by enabled bundle
+        depends_on: [registry-restructure]
+        unblocks: [textserve-mcp-binary]
+        resolved_questions:
+          - q: toggle return semantics — block & poll, or fire-and-forget?
+            decided: fire-and-forget; Request() returns pending entry immediately
+
+      - id: textserve-mcp-binary
+        title: New textserve-mcp Go binary, the single MCP surface
+        status: shipped
+        landed_in: |
+          v0.7.0 (binary + 6 meta-tools, stubs);
+          v0.7.1 (textmap stdio backend wired);
+          v0.7.2 (installed alongside standalone textmap);
+          v0.7.3 (standalone textmap registration removed);
+          v0.8.0 (Backend interface);
+          v0.8.2 (bundle gating + docker HTTP MCP backend);
+          v0.8.3 (tools-api REST backend);
+          v0.10.0 (live overlay reconcile + tools/list_changed)
+        risk: high
+        why: |
+          The whole point of the bundles work — give Claude one MCP
+          entry that internally fans out. Proxies HTTP tools-api
+          adapters and stdio textmap-mcp under a unified tool surface.
+          Implements the 6 always-on meta-tools; gates everything else
+          on `_enabled`.
+        deliverables:
+          - New binary at cmd/textserve-mcp/main.go
+          - Dependency add — github.com/modelcontextprotocol/go-sdk
+            (Anthropic-maintained official Go SDK; stdio transport)
+          - HTTP backend — proxies to tools-api /invoke, /describe
+          - stdio backend — spawns `uv run python -m textmap_mcp` as
+            child; JSON-RPC over its stdin/stdout. Reuse command line
+            from servers/textmap/server.yaml
+          - Six meta-tools always visible:
+              textmap.search       — proxy to textmap-mcp search
+              textmap.propose      — proxy to textmap-mcp propose_node
+              textmap.init_session — stub (proper shape in spike #5)
+              bundles.list         — read registry + current enabled map
+              bundles.toggle       — write to toggle-inbox (spike #2)
+              bundles.example      — stub (proper shape in spike #4)
+          - Tool namespacing — every upstream tool surfaces as
+            `<bundle>.<tool>` (textmap.search, slack.post_message…)
+          - Bundle gating in tools/list — disabled bundles return
+            empty tool sets; gated tool calls return structured
+            "bundle not enabled — call bundles.toggle" errors
+          - Update ~/.claude/mcp.json — single entry pointing at the
+            textserve-mcp binary; mark textmap server.yaml
+            `no_register: true` so the orchestrator stops registering
+            it as its own MCP endpoint
+        verification:
+          - `claude` session sees exactly 6 tools by default
+          - Calling a tool from a disabled bundle returns the gated
+            error, not 404
+          - Toggling on (via spike #2 approve), restarting claude
+            session, shows the bundle's tools appear
+          - tools-api /describe still works for non-MCP callers
+        depends_on: [meta-tools-and-inbox]
+        unblocks: [bundles-example-via-textforums, init-session]
+
+      - id: bundles-example-via-textforums
+        title: bundles.example backed by textforums threads
+        status: shipped
+        landed_in: textserve v0.9.0
+        decided: tag with exact tool name (e.g. `textmap.search`); fall back to server-name prefix when no exact-match thread exists
+        risk: low
+        why: |
+          Examples are coordination artifacts that evolve. textforums
+          already does threaded, taggable, human-reviewable artifacts;
+          reusing it avoids a parallel examples store and keeps drift
+          visible. Removes the bundles.example stub from spike #3.
+        deliverables:
+          - Decide thread-naming convention (one per tool tag=<tool>,
+            or one per bundle tag=<bundle> with posts mentioning tool)
+          - Wire bundles.example(tool) to read matching textforums
+            threads, return top N posts as MCP tool response
+          - Author the seed threads for the textmap meta-tools first
+            so the surface is usable on day one
+        verification:
+          - `bundles.example("textmap.search")` returns a non-empty
+            response when the corresponding thread exists
+          - Returns a structured "no examples yet" when the thread is
+            missing rather than erroring
+        depends_on: [textserve-mcp-binary]
+        unblocks: []
+        open_questions:
+          - one thread per tool vs. one per bundle?
+
+      - id: init-session
+        title: textmap.init_session — workspace/task bootstrap
+        status: shipped
+        landed_in: textserve v0.9.1
+        shape: |
+          Five query_type calls (workspace, intent, problem, goal,
+          decision) capped at 20 nodes each; optional `query` runs
+          textmap.search and includes hits as `search_hits`;
+          per-section failures degrade to a `warnings` array
+        risk: high
+        why: |
+          Shape is "growing" per the spec. Revisit after spikes 1–4
+          are felt out and we know what context Claude actually needs
+          bootstrapped at session start.
+        deliverables: []
+        depends_on: [textserve-mcp-binary]
+        unblocks: []
+
+    cross_cutting_verification:
+      - `textserve doctor` continues to pass throughout
+      - `~/.claude/mcp.json` contains exactly one server: `textserve-mcp`
+      - tools-api log + toggle log give a complete audit of model→human
+        toggle requests over a session
+      - Existing `textserve` orchestration commands (up, down, status,
+        bundle list, profile alias) keep working
+
+    post_ship_followups:
+      - notifications/tools/list_changed emission — originally deferred,
+        shipped earlier than expected in v0.10.0 via overlay-file mtime
+        watcher + Server.AddTool/RemoveTools (go-sdk emits the wire
+        notification automatically)
+      - bundles.toggle response read-back + inbox_path — added v0.9.2
+
+    still_deferred:
+      - workspace-scoped bundle policy (belong_to workspace constraining
+        which bundles can be toggled in which cwd) — raised in spec,
+        deferred entirely until a real workspace-collision case appears

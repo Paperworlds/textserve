@@ -88,28 +88,44 @@ const (
 	ProtocolStdio  = "stdio"
 )
 
-// ProfileEntry defines a named set of servers for a session type.
-type ProfileEntry struct {
+// BundleEntry defines a named, togglable set of servers (formerly "profile").
+type BundleEntry struct {
 	Description string   `yaml:"description,omitempty"`
 	Servers     []string `yaml:"servers,omitempty"`
 	Tags        []string `yaml:"tags,omitempty"`
+	Enabled     bool     `yaml:"enabled,omitempty"`
 }
 
 // FleetRegistry is the top-level registry.yaml structure.
 type FleetRegistry struct {
-	Servers  map[string]RegistryEntry `yaml:"servers"`
-	Profiles map[string]ProfileEntry  `yaml:"profiles,omitempty"`
+	Servers map[string]RegistryEntry `yaml:"servers"`
+	Bundles map[string]BundleEntry   `yaml:"bundles,omitempty"`
 }
 
-// Load parses registry.yaml at the given path.
+// rawRegistry mirrors FleetRegistry but accepts a legacy `profiles:` key for
+// backwards-compatible loading. When `bundles:` is absent and `profiles:` is
+// present, the latter is promoted with a stderr deprecation warning.
+type rawRegistry struct {
+	Servers  map[string]RegistryEntry `yaml:"servers"`
+	Bundles  map[string]BundleEntry   `yaml:"bundles,omitempty"`
+	Profiles map[string]BundleEntry   `yaml:"profiles,omitempty"`
+}
+
+// Load parses registry.yaml at the given path. Accepts either `bundles:` (new)
+// or legacy `profiles:` (deprecated; emits a warning).
 func Load(path string) (*FleetRegistry, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read registry: %w", err)
 	}
-	var r FleetRegistry
-	if err := yaml.Unmarshal(data, &r); err != nil {
+	var raw rawRegistry
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("parse registry: %w", err)
+	}
+	r := FleetRegistry{Servers: raw.Servers, Bundles: raw.Bundles}
+	if len(r.Bundles) == 0 && len(raw.Profiles) > 0 {
+		fmt.Fprintf(os.Stderr, "warning: %s uses legacy `profiles:` key — rename to `bundles:`\n", path)
+		r.Bundles = raw.Profiles
 	}
 	return &r, nil
 }
@@ -159,25 +175,25 @@ func EntryYAML(e RegistryEntry) ([]byte, error) {
 	return yaml.Marshal(e)
 }
 
-// ResolveProfile returns the sorted list of server names for a named profile.
+// ResolveBundle returns the sorted list of server names for a named bundle.
 // Explicit servers: entries are validated; tag entries are expanded via FilterByTag.
-func (r *FleetRegistry) ResolveProfile(name string) ([]string, error) {
-	p, ok := r.Profiles[name]
+func (r *FleetRegistry) ResolveBundle(name string) ([]string, error) {
+	b, ok := r.Bundles[name]
 	if !ok {
-		return nil, fmt.Errorf("profile %q not found", name)
+		return nil, fmt.Errorf("bundle %q not found", name)
 	}
 	seen := map[string]bool{}
 	var result []string
-	for _, s := range p.Servers {
+	for _, s := range b.Servers {
 		if _, ok := r.Servers[s]; !ok {
-			return nil, fmt.Errorf("profile %q references unknown server %q", name, s)
+			return nil, fmt.Errorf("bundle %q references unknown server %q", name, s)
 		}
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
-	for _, t := range p.Tags {
+	for _, t := range b.Tags {
 		for _, s := range r.FilterByTag(t) {
 			if !seen[s] {
 				seen[s] = true

@@ -24,13 +24,13 @@ Add to `~/.local/paperworlds/textserve/local.yaml`:
 servers:
   tool-gateway:
     env:
-      DD_API_KEY: "op://Vault/Item/field"
-      DD_APP_KEY: "op://Vault/Item/field"
-      SNOWFLAKE_ACCOUNT: "op://Vault/Item/field"
-      SNOWFLAKE_USER: "op://Vault/Item/field"
+      DD_API_KEY: "op://Paradigm/Datadog API/API Key"
+      DD_APP_KEY: "op://Paradigm/Datadog API/Application Key"
+      SNOWFLAKE_ACCOUNT: "op://Private/Snowflake MCP/SNOWFLAKE_ACCOUNT"
+      SNOWFLAKE_USER: "op://Private/Snowflake MCP/SNOWFLAKE_USER"
     literal_env:
-      DD_API_KEY_SOURCE: "op://Vault/Item/field"
-      DD_APP_KEY_SOURCE: "op://Vault/Item/field"
+      DD_API_KEY_SOURCE: "op://Paradigm/Datadog API/API Key"
+      DD_APP_KEY_SOURCE: "op://Paradigm/Datadog API/Application Key"
 ```
 
 ## Endpoints
