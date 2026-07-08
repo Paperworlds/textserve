@@ -300,6 +300,59 @@ plans:
         notification automatically)
       - bundles.toggle response read-back + inbox_path — added v0.9.2
 
+    new_plans:
+      - id: init-session-v2
+        title: textmap.init_session v2 — task-aware session briefing
+        status: idea
+        source: "2026-07-08 session"
+        motivation: |
+          The shipped init_session (v0.9.1) pulls workspace/intent/problem/goal/decision
+          nodes from textmap. What's missing: a second layer that takes that context
+          and generates a task-specific briefing tailored to what the session is actually
+          about to do. Could include: open textforums threads matching the task, relevant
+          GAPS.yaml entries, active bundle state, and a short Haiku/Sonnet call to
+          synthesize a "session contract" — base requirements + task-specific customs.
+        shape: |
+          textmap.init_session(task_hint?: string) →
+            1. existing five-query textmap pull (unchanged)
+            2. textforums threads matching task_hint tag (if provided)
+            3. GAPS.yaml entries relevant to task_hint
+            4. optional: background Haiku call to synthesize a 150-word
+               session briefing from the above — returns as `briefing` field
+          The briefing is not injected automatically; the tool returns it
+          and Claude decides how to use it. Human stays in control.
+        open_questions:
+          - Haiku call inline vs a separate `init_session.brief` tool?
+          - Should task_hint be freetext or a textmap node id?
+          - Cost: is the background Haiku call worth it every session start?
+
+      - id: run-mask
+        title: textserve run-mask — invoke a textmasks persona as a Claude session
+        status: idea
+        source: "2026-07-08 session — textmasks is a registry, not a runner; textserve is the consumer"
+        motivation: |
+          textmasks defines what a persona is (system_prompt + tool grants + typed inputs)
+          but explicitly does not own invocation. textserve is the right consumer:
+          it already manages Claude sessions, bundles, and the MCP surface.
+          A `textserve run-mask <name>` command resolves the persona from textmasks,
+          builds the claude CLI invocation (--system-prompt, --allowedTools,
+          --disallowedTools, model flag), and either launches interactively or
+          runs as a one-shot task agent.
+        shape: |
+          textserve run-mask <mask-name> [--input key=value ...] [--task "..."]
+            1. resolve mask YAML from textmasks registry path
+            2. render system_prompt (interpolate typed inputs)
+            3. build: claude [--model <mask.model>] -p "<task>" \
+                       --allowedTools <...> --disallowedTools <...>
+            4. interactive mode (no --task): open a session wearing the mask
+               one-shot mode (--task): run and exit, print result
+          Daily/recurring use: run memory-steward, release-warden, outro-spection
+          masks on demand or on schedule (pairs with textforums for output).
+        open_questions:
+          - Where does textmasks registry path live? env var or textserve config?
+          - Output routing for one-shot mode: stdout, textforums thread, or file?
+          - Should `textserve toggle-inbox` be able to trigger a mask run on approve?
+
     still_deferred:
       - workspace-scoped bundle policy (belong_to workspace constraining
         which bundles can be toggled in which cwd) — raised in spec,
