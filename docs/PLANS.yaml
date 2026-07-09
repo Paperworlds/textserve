@@ -352,6 +352,18 @@ plans:
           - Where does textmasks registry path live? env var or textserve config?
           - Output routing for one-shot mode: stdout, textforums thread, or file?
           - Should `textserve toggle-inbox` be able to trigger a mask run on approve?
+        design_notes:
+          - benchmark_contracts: |
+              Source: SGLang SKILL.md pattern (lmsys.org/blog/2026-07-02-agent-assisted-sglang-development).
+              Before a mask run begins, lock the experimental conditions upfront:
+              which tools are allowed, what the evaluation criteria are (what "done"
+              looks like), and any fixed constraints (model tier, max turns, output
+              schema). This prevents the agent from accidentally optimizing an easier
+              problem after seeing early results. Concretely: run-mask could emit a
+              contract block at session start — tool surface, task, done-condition —
+              and log it alongside the run output so the result is auditable against
+              the original intent. Pairs naturally with one-shot mode (--task flag)
+              where the contract is derived from the task string + mask definition.
 
     still_deferred:
       - workspace-scoped bundle policy (belong_to workspace constraining
